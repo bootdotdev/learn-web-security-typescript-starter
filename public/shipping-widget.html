@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Acorn Express Shipping Estimate</title>
+    <link rel="stylesheet" href="/shipping-widget.css" />
+    <script src="/shipping-widget.js" defer></script>
+  </head>
+  <body>
+    <main class="widget">
+      <p class="eyebrow">Acorn Express</p>
+      <h1>Shipping estimate</h1>
+      <label for="postal-code">Postal code</label>
+      <div class="controls">
+        <input id="postal-code" type="text" inputmode="numeric" autocomplete="postal-code" />
+        <button id="estimate-button" type="button">Estimate delivery</button>
+      </div>
+      <p id="estimate-output" class="estimate" aria-live="polite">
+        Enter a postal code to estimate delivery.
+      </p>
+      <p id="host-access" class="host-access" aria-live="polite">Checking host page access...</p>
+    </main>
+  </body>
+</html>

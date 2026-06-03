@@ -1,0 +1,45 @@
+{
+  "name": "bearly-secure",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Intentionally vulnerable starter app for Boot.dev's Web Security course",
+  "type": "module",
+  "scripts": {
+    "attacker-lab": "node scripts/attacker-lab.mjs",
+    "db:reset": "node src/db/seed.ts",
+    "dev": "node --watch src/main.ts",
+    "format": "oxfmt",
+    "lint": "oxfmt --check && oxlint",
+    "lint:fix": "npm run format && oxlint --fix",
+    "start": "node src/main.ts",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
+    "argon2": "^0.45.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "fflate": "^0.8.3",
+    "helmet": "^8.3.0",
+    "multer": "^2.2.0",
+    "otplib": "^13.4.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^26.1.1",
+    "@types/qrcode": "^1.5.6",
+    "oxfmt": "^0.60.0",
+    "oxlint": "^1.75.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "allowScripts": {
+    "argon2": true
+  }
+}
