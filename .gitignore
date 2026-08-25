@@ -6,6 +6,7 @@ data/*.sqlite-wal
 data/*.log
 data/uploads/*
 !data/uploads/mystery-shack-tax-exemption.pdf
+data/bulk-tax-documents/
 .env
 .env.local
 .env.*.local

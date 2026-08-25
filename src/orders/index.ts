@@ -1,14 +1,26 @@
-import { getDb } from "../db/index.ts";
-import { getCartTotalCents, type CartItem } from "../cart/index.ts";
+import { getCartTotalCents, type CartItem } from "../cart.ts";
+import type { DatabaseSync } from "node:sqlite";
+import type { Keyring } from "../storage/keyring.ts";
+import { encryptShippingDetails, type ShippingDetails } from "./shipping.ts";
+
+type OrderStatus = "pending" | "paid" | "shipped" | "refunded";
+
+export class InsufficientInventoryError extends Error {
+  constructor() {
+    super("One or more cart items are no longer available in the requested quantity.");
+    this.name = "InsufficientInventoryError";
+  }
+}
 
 export type Order = {
   id: number;
   user_id: number;
   customer_name: string;
   customer_email: string;
-  status: string;
+  status: OrderStatus;
   total_cents: number;
   admin_notes: string;
+  shipping_details_encrypted: string | null;
   created_at: string;
 };
 
@@ -21,9 +33,17 @@ export type OrderItem = {
   price_cents: number;
 };
 
-export function createOrderFromCart(userId: number, items: CartItem[], adminNotes: string): Order {
-  const db = getDb();
-  const totalCents = getCartTotalCents(items);
+export function createOrderFromCart(
+  db: DatabaseSync,
+  userId: number,
+  items: CartItem[],
+  discountCents: number,
+  shippingDetails: ShippingDetails,
+  adminNotes: string,
+  keyring: Keyring | undefined,
+): Order {
+  const totalCents = getCartTotalCents(items) - discountCents;
+  const encryptedShippingDetails = encryptShippingDetails(shippingDetails, keyring);
 
   db.exec("BEGIN");
 
@@ -31,11 +51,17 @@ export function createOrderFromCart(userId: number, items: CartItem[], adminNote
     const result = db
       .prepare(
         `
-          INSERT INTO orders (user_id, status, total_cents, admin_notes)
-          VALUES (?, 'paid', ?, ?)
+          INSERT INTO orders (
+            user_id,
+            status,
+            total_cents,
+            admin_notes,
+            shipping_details_encrypted
+          )
+          VALUES (?, 'pending', ?, ?, ?)
         `,
       )
-      .run(userId, totalCents, adminNotes);
+      .run(userId, totalCents, adminNotes, encryptedShippingDetails);
     const orderId = Number(result.lastInsertRowid);
     const insertItem = db.prepare(
       `
@@ -43,8 +69,21 @@ export function createOrderFromCart(userId: number, items: CartItem[], adminNote
         VALUES (?, ?, ?, ?)
       `,
     );
+    const decrementInventory = db.prepare(
+      `
+        UPDATE products
+        SET inventory_count = inventory_count - ?
+        WHERE id = ?
+          AND is_active = 1
+          AND inventory_count >= ?
+      `,
+    );
 
     for (const item of items) {
+      const inventoryResult = decrementInventory.run(item.quantity, item.product_id, item.quantity);
+      if (inventoryResult.changes !== 1) {
+        throw new InsufficientInventoryError();
+      }
       insertItem.run(orderId, item.product_id, item.quantity, item.price_cents);
     }
 
@@ -55,7 +94,7 @@ export function createOrderFromCart(userId: number, items: CartItem[], adminNote
       `,
     ).run(userId);
 
-    const order = findOrderById(orderId);
+    const order = findOrderById(db, orderId);
     if (!order) {
       throw new Error("Failed to create order");
     }
@@ -68,8 +107,22 @@ export function createOrderFromCart(userId: number, items: CartItem[], adminNote
   }
 }
 
-export function listOrdersForUser(userId: number): Order[] {
-  return getDb()
+export function approvePawPalOrder(db: DatabaseSync, orderId: number): boolean {
+  const result = db
+    .prepare(
+      `
+        UPDATE orders
+        SET status = 'paid'
+        WHERE id = ? AND status = 'pending'
+      `,
+    )
+    .run(orderId);
+
+  return result.changes === 1;
+}
+
+export function listOrdersForUser(db: DatabaseSync, userId: number): Order[] {
+  return db
     .prepare(
       `
         SELECT
@@ -80,6 +133,7 @@ export function listOrdersForUser(userId: number): Order[] {
           orders.status,
           orders.total_cents,
           orders.admin_notes,
+          orders.shipping_details_encrypted,
           orders.created_at
         FROM orders
         JOIN users ON users.id = orders.user_id
@@ -90,8 +144,8 @@ export function listOrdersForUser(userId: number): Order[] {
     .all(userId) as Order[];
 }
 
-export function listAllOrders(): Order[] {
-  return getDb()
+export function listAllOrders(db: DatabaseSync): Order[] {
+  return db
     .prepare(
       `
         SELECT
@@ -102,6 +156,7 @@ export function listAllOrders(): Order[] {
           orders.status,
           orders.total_cents,
           orders.admin_notes,
+          orders.shipping_details_encrypted,
           orders.created_at
         FROM orders
         JOIN users ON users.id = orders.user_id
@@ -111,8 +166,8 @@ export function listAllOrders(): Order[] {
     .all() as Order[];
 }
 
-export function findOrderById(orderId: number): Order | undefined {
-  return getDb()
+export function findOrderById(db: DatabaseSync, orderId: number): Order | undefined {
+  return db
     .prepare(
       `
         SELECT
@@ -123,6 +178,7 @@ export function findOrderById(orderId: number): Order | undefined {
           orders.status,
           orders.total_cents,
           orders.admin_notes,
+          orders.shipping_details_encrypted,
           orders.created_at
         FROM orders
         JOIN users ON users.id = orders.user_id
@@ -132,8 +188,8 @@ export function findOrderById(orderId: number): Order | undefined {
     .get(orderId) as Order | undefined;
 }
 
-export function listOrderItems(orderId: number): OrderItem[] {
-  return getDb()
+export function listOrderItems(db: DatabaseSync, orderId: number): OrderItem[] {
+  return db
     .prepare(
       `
         SELECT

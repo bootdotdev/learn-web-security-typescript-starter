@@ -1,20 +1,17 @@
 # Bearly Secure
 
-Bearly Secure is the intentionally vulnerable starter app for "Learn Web Security in TypeScript."
+Bearly Secure is the intentionally vulnerable starter app for "Learn Web Security in TypeScript." It's a tiny plushie shop built with TypeScript, Express, and SQLite.
 
-The app is a tiny plushie shop built with:
+> [!IMPORTANT] This README describes the freshly cloned starter project from lesson 1.2. Course assignments will change the app's behavior, but this file remains a reference for the initial baseline.
 
-- TypeScript
-- Node.js 24+
-- Express
-- SQLite through Node's built-in `node:sqlite` module
-- Multer for local file uploads
-- Server-rendered HTML and JSON endpoints
-- Small reset stylesheet plus custom CSS
+## Requirements
 
-## Commands
+- Node.js 24 or newer
+- npm
 
-Install dependencies:
+## Run the Starter
+
+Install the dependencies:
 
 ```sh
 npm install
@@ -23,14 +20,28 @@ npm install
 Seed the local database:
 
 ```sh
-npm run seed -- --reset
+npm run db:reset
 ```
 
-Run the app locally:
+Start the app at <http://localhost:3000>:
 
 ```sh
-npm run dev
+npm start
 ```
+
+For automatic restarts while editing, use `npm run dev` instead.
+
+## Attacker Lab
+
+The repository includes a small browser-based attacker lab for cross-origin exercises. Run it in another terminal:
+
+```sh
+npm run attacker-lab
+```
+
+Then open <http://localhost:4000>.
+
+## Project Checks
 
 Type-check the app:
 
@@ -38,7 +49,7 @@ Type-check the app:
 npm run typecheck
 ```
 
-Check formatting, linting, and CSS:
+Check formatting and lint source files:
 
 ```sh
 npm run lint
@@ -50,83 +61,42 @@ Format files:
 npm run format
 ```
 
-Run the app without file-watching:
+You can restore the deterministic starter data at any time with `npm run db:reset`.
 
-```sh
-npm start
-```
+## Baseline Features
 
-## Current Features
+- Public storefront with product listing, search, detail pages, and reviews
+- Account creation, login, logout, password reset, and session cookies
+- Account profiles, order history, review management, and tax-document uploads
+- Authenticated shopping cart and checkout with simulated PawPal and Acorn integrations
+- Support and admin areas for order, tax-document, and product workflows
+- JSON product and order APIs
+- Browser attacker lab and embedded shipping widget
+- Deterministic local order-assistant simulation
+- SQLite seed data, local file storage, and JSON-lines application logs
+- Single-stage Node 24 Dockerfile that runs TypeScript directly
 
-- Public storefront with product listing, product detail pages, and product search
-- Account creation, login, logout, and password reset with session cookies
-- Redirect-after-login behavior using a `returnTo` parameter
-- Account profile page with email changes and "Your Reviews" section
-- Account order history and order detail pages
-- Tax exemption document upload/download with support review
-- JSON endpoints for account orders, order details, and products
-- Origin-reflecting CORS headers on API routes
-- Authenticated shopping cart
-- Simulated PawPal checkout flow that creates orders without collecting card data
-- Support order lookup and tax exemption document review for support and admin users
-- Admin product catalog views and create/edit flows with internal pricing and inventory data
-- Product reviews with logged-in review posting and account review editing/deletion
-- Deterministic seed data for users, products, orders, order items, reviews, and one uploaded tax exemption document
-- Centralized error handling that exposes diagnostics in the browser
-- Local JSON-lines app logging in `data/bearly-secure.log`
-- Small HTML page rendering helper
-- Shared reset and app stylesheets in `public/`
+## Security Warning
 
-## Intentional Starter Weaknesses
+Bearly Secure is deliberately unsafe. It contains exploitable authentication, authorization, injection, browser-security, data-exposure, infrastructure, and operational weaknesses for course exercises.
 
-Bearly Secure is intentionally vulnerable. Current starter weaknesses include:
+Do not deploy it or use its security patterns in a real application. Its credentials, integrations, payments, and third-party services are local simulations that use fake data only.
 
-- Fast unsalted SHA-256 password hashes
-- Weak/default session cookie options
-- Account creation does not verify email ownership
-- Email changes do not verify ownership of the new address or require recent authentication
-- Logout clears the browser cookie but does not revoke the server-side session
-- Session lookup does not reject revoked sessions yet
-- Password reset reveals whether an email address has an account
-- Password reset links are shown in the browser instead of sent out-of-band
-- Password reset tokens are predictable and can be reused
-- Password reset accepts tokens without checking expiration
-- Login accepts unvalidated `returnTo` redirects
-- Product search uses string-built SQL
-- User-controlled HTML is rendered without escaping
-- API routes reflect any request origin and allow credentialed CORS requests
-- State-changing account, cart, checkout, review posting/editing/deletion, and file upload flows have no CSRF protection
-- Order detail pages and API routes require login but do not enforce order ownership
-- Review edit and delete routes require login but do not enforce review ownership
-- File downloads require login but do not enforce file ownership
-- Tax exemption uploads trust client-provided file metadata
-- Order APIs expose internal order notes
-- The products API exposes internal product costs and inactive products
-- Support users can see all customer orders, internal order notes, and uploaded tax exemption metadata
-- Admin users can see internal product costs and margins
-- Checkout does not require recent authentication
-- Checkout does not reserve inventory or re-check stock during order creation
-- Checkout stores shipping and fake payment details in internal order notes
-- Error responses expose error names, messages, stack traces, SQL details, and file paths
-- Logs include emails, session IDs, password reset tokens, reset links, shipping addresses, internal order notes, uploaded filenames, and local storage paths
+## Baseline Structure
 
-## Current Structure
-
-- `src/server.ts`: starts the HTTP server
+- `src/main.ts`: starts the HTTP server
 - `src/app.ts`: configures Express middleware and routes
-- `src/cors.ts`: contains the intentionally permissive API CORS middleware
-- `src/errors.ts`: contains the intentionally leaky global error handler
-- `src/html.ts`: renders the shared HTML page shell
-- `src/logger.ts`: writes intentionally over-detailed structured app logs
-- `src/auth/`: contains password, password reset, user, and session helpers
-- `src/cart/`: contains shopping cart helpers
-- `src/db/`: owns SQLite setup, schema creation, and deterministic seed data
-- `src/orders/`, `src/products/`, and `src/reviews/`: contain domain data helpers
-- `src/uploads/`: contains upload metadata helpers and Multer middleware
-- `src/routes/`: contains centralized Express route modules, including API, auth, cart, checkout, support, and admin areas
-- `data/uploads/`: contains local uploaded files, including the seeded sample tax exemption PDF
+- `src/dependencies.ts`: loads runtime configuration and shared dependencies
+- `src/auth/`: contains authentication, session, TOTP, passkey, and access-control helpers
+- `src/integrations/`: contains simulated external-service integrations
+- `src/orders/` and the `src/cart.ts`, `src/products.ts`, and `src/reviews.ts` modules: contain domain data helpers
+- `src/uploads/`: contains upload metadata, middleware, and archive extraction
+- `src/routes/`: contains the app's Express route modules
+- `src/views/`: renders server-side HTML
+- `src/assistant.ts`: builds and runs the local order-assistant simulation
+- `scripts/`: contains local validation and support scripts
+- `attacker-lab/`: contains the browser attacker lab
 - `public/`: contains static assets
-
-## Near-Term Next Steps
-
-1. Add lesson check scripts once the first project-backed assignment is ready.
+- `data/uploads/`: contains local uploads and the seeded sample tax exemption PDF
+- `data/bulk-tax-documents/`: receives documents extracted from support ZIP imports
+- `Dockerfile`: defines the initial single-stage container build

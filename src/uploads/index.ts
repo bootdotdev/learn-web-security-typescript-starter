@@ -1,4 +1,4 @@
-import { getDb } from "../db/index.ts";
+import type { DatabaseSync } from "node:sqlite";
 
 export type UploadedFile = {
   id: number;
@@ -12,12 +12,13 @@ export type UploadedFile = {
 };
 
 export function createUploadedFile(
+  db: DatabaseSync,
   userId: number,
   originalName: string,
   storagePath: string,
   contentType: string,
 ): UploadedFile {
-  const result = getDb()
+  const result = db
     .prepare(
       `
         INSERT INTO uploaded_files (user_id, original_name, storage_path, content_type)
@@ -26,7 +27,7 @@ export function createUploadedFile(
     )
     .run(userId, originalName, storagePath, contentType);
 
-  const uploadedFile = findUploadedFileById(Number(result.lastInsertRowid));
+  const uploadedFile = findUploadedFileById(db, Number(result.lastInsertRowid));
   if (!uploadedFile) {
     throw new Error("Failed to create uploaded file");
   }
@@ -34,8 +35,11 @@ export function createUploadedFile(
   return uploadedFile;
 }
 
-export function findUploadedFileById(uploadedFileId: number): UploadedFile | undefined {
-  return getDb()
+export function findUploadedFileById(
+  db: DatabaseSync,
+  uploadedFileId: number,
+): UploadedFile | undefined {
+  return db
     .prepare(
       `
         SELECT
@@ -55,8 +59,8 @@ export function findUploadedFileById(uploadedFileId: number): UploadedFile | und
     .get(uploadedFileId) as UploadedFile | undefined;
 }
 
-export function listUploadedFilesForUser(userId: number): UploadedFile[] {
-  return getDb()
+export function listUploadedFilesForUser(db: DatabaseSync, userId: number): UploadedFile[] {
+  return db
     .prepare(
       `
         SELECT
@@ -77,8 +81,8 @@ export function listUploadedFilesForUser(userId: number): UploadedFile[] {
     .all(userId) as UploadedFile[];
 }
 
-export function listAllUploadedFiles(): UploadedFile[] {
-  return getDb()
+export function listAllUploadedFiles(db: DatabaseSync): UploadedFile[] {
+  return db
     .prepare(
       `
         SELECT

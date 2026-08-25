@@ -1,131 +1,96 @@
 import { Router } from "express";
+import type { Dependencies } from "../dependencies.ts";
 import {
   addProductToCart,
   getCartTotalCents,
   listCartItems,
+  MAX_CART_QUANTITY,
   updateCartItemQuantity,
-  type CartItem,
-} from "../cart/index.ts";
-import { getCurrentSession } from "../auth/sessions.ts";
-import { renderPage } from "../html.ts";
-import { findProductById } from "../products/index.ts";
+} from "../cart.ts";
+import { requireAuth } from "../auth/accessControl.ts";
+import { sendErrorPage } from "../errors.ts";
+import { findProductById } from "../products.ts";
+import { renderCartPage } from "../views/cart.ts";
 
-export const router = Router();
+export function createCartRouter(deps: Dependencies): Router {
+  const { db } = deps;
+  const router = Router();
 
-router.get("/cart", (req, res) => {
-  const current = getCurrentSession(req.header("cookie"));
-  if (!current) {
-    res.redirect("/login");
-    return;
-  }
+  router.get("/cart", (req, res) => {
+    const current = requireAuth(db, req, res);
+    if (!current) {
+      return;
+    }
 
-  const items = listCartItems(current.user.id);
-  const totalCents = getCartTotalCents(items);
+    const items = listCartItems(db, current.user.id);
+    const totalCents = getCartTotalCents(items);
 
-  res.type("html").send(
-    renderPage(
-      "Your Cart",
-      `<nav><a href="/">Back to store</a></nav>
-      <p class="eyebrow">Shopping Cart</p>
-      <h1>Your Cart</h1>
-      ${renderCart(items, totalCents)}`,
-    ),
-  );
-});
+    res
+      .type("html")
+      .send(
+        renderCartPage(current.user.display_name, items, totalCents, current.session.csrf_token),
+      );
+  });
 
-router.post("/cart/items", (req, res) => {
-  const current = getCurrentSession(req.header("cookie"));
-  if (!current) {
-    res.redirect("/login");
-    return;
-  }
+  router.post("/cart/items", (req, res) => {
+    const current = requireAuth(db, req, res);
+    if (!current) {
+      return;
+    }
 
-  const productId = Number(req.body.productId);
-  const quantity = Number(req.body.quantity ?? 1);
+    const productId = Number(req.body.productId);
+    const quantity = parseCartQuantity(req.body.quantity, 1);
 
-  if (!Number.isInteger(productId) || !findProductById(productId)) {
-    res.status(404).send("Product not found");
-    return;
-  }
+    if (!Number.isSafeInteger(productId) || !findProductById(db, productId)) {
+      sendErrorPage(res, 404, "Product Not Found", "We couldn't find that product.");
+      return;
+    }
 
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    res.status(400).send("Invalid quantity");
-    return;
-  }
+    if (quantity === undefined) {
+      sendErrorPage(res, 400, "Invalid Quantity", "Enter a valid quantity.");
+      return;
+    }
 
-  addProductToCart(current.user.id, productId, quantity);
-  res.redirect("/cart");
-});
+    if (!addProductToCart(db, current.user.id, productId, quantity)) {
+      sendErrorPage(res, 400, "Unable to Update Cart", "That quantity is no longer available.");
+      return;
+    }
 
-router.post("/cart/items/:productId", (req, res) => {
-  const current = getCurrentSession(req.header("cookie"));
-  if (!current) {
-    res.redirect("/login");
-    return;
-  }
+    res.redirect("/cart");
+  });
 
-  const productId = Number(req.params.productId);
-  const quantity = Number(req.body.quantity);
+  router.post("/cart/items/:productId", (req, res) => {
+    const current = requireAuth(db, req, res);
+    if (!current) {
+      return;
+    }
 
-  if (!Number.isInteger(productId)) {
-    res.status(404).send("Product not found");
-    return;
-  }
+    const productId = Number(req.params.productId);
+    const quantity = parseCartQuantity(req.body.quantity, 0);
 
-  if (!Number.isInteger(quantity) || quantity < 0) {
-    res.status(400).send("Invalid quantity");
-    return;
-  }
+    if (!Number.isSafeInteger(productId)) {
+      sendErrorPage(res, 404, "Product Not Found", "We couldn't find that product.");
+      return;
+    }
 
-  updateCartItemQuantity(current.user.id, productId, quantity);
-  res.redirect("/cart");
-});
+    if (quantity === undefined) {
+      sendErrorPage(res, 400, "Invalid Quantity", "Enter a valid quantity.");
+      return;
+    }
 
-function renderCart(items: CartItem[], totalCents: number): string {
-  if (items.length === 0) {
-    return `<article class="card empty-state"><p>Your cart is empty. The bears are trying not to take it personally.</p></article>`;
-  }
+    if (!updateCartItemQuantity(db, current.user.id, productId, quantity)) {
+      sendErrorPage(res, 400, "Unable to Update Cart", "That quantity is no longer available.");
+      return;
+    }
+    res.redirect("/cart");
+  });
 
-  const rows = items
-    .map(
-      (item) => `<tr>
-              <td><a href="/products/${item.product_id}">${item.name}</a></td>
-              <td>${formatMoney(item.price_cents)}</td>
-              <td>
-                <form method="post" action="/cart/items/${item.product_id}" class="quantity-form">
-                  <input name="quantity" type="number" min="0" value="${item.quantity}">
-                  <button type="submit">Update</button>
-                </form>
-              </td>
-              <td>${formatMoney(item.line_total_cents)}</td>
-            </tr>
-            `,
-    )
-    .join("")
-    .trimEnd();
-
-  return `<div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Price</th>
-              <th>Quantity</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-      <article class="card cart-summary">
-        <h2>Total: ${formatMoney(totalCents)}</h2>
-        <p>Ready to send these plushies on their way?</p>
-        <a class="button-link" href="/checkout">Proceed to checkout</a>
-      </article>`;
+  return router;
 }
 
-function formatMoney(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+function parseCartQuantity(value: unknown, minimum: 0 | 1): number | undefined {
+  const quantity = Number(value);
+  return Number.isSafeInteger(quantity) && quantity >= minimum && quantity <= MAX_CART_QUANTITY
+    ? quantity
+    : undefined;
 }

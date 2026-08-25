@@ -1,37 +1,75 @@
-import { rmSync } from "node:fs";
-import { join } from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import { hashPassword } from "../auth/passwords.ts";
-import { getDb } from "./index.ts";
+import { hashBackupCode } from "../auth/totpBackupCodes.ts";
+import { initDependencies } from "../dependencies.ts";
+import { resetDb } from "./reset.ts";
 
-const databasePath =
-  process.env.DATABASE_URL ?? join(process.cwd(), "data", "bearly-secure.sqlite");
+const warehouseApiKeyHash = "08efe1ae20064a3db693bba1a5003a76ad23fe600085f5457099875176a0eede";
 
-if (process.argv.includes("--reset")) {
-  rmSync(databasePath, { force: true });
+type SeedUser = {
+  email: string;
+  displayName: string;
+  role: "customer" | "support" | "admin";
+  passwordHash: string;
+};
+
+const demoPassword = "password123";
+const seedUserDefinitions = [
+  { email: "mabel@example.com", displayName: "Mabel Pines", role: "customer" },
+  { email: "sancho@example.com", displayName: "Sancho Panza", role: "support" },
+  { email: "wendy@example.com", displayName: "Wendy Corduroy", role: "admin" },
+  { email: "scarrasco@example.com", displayName: "Samson Carrasco", role: "customer" },
+  { email: "consumptive@example.com", displayName: "Clavdia Chauchat", role: "customer" },
+  { email: "pacifica@example.com", displayName: "Pacifica Northwest", role: "customer" },
+  { email: "vico@example.com", displayName: "Ludovico Settembrini", role: "customer" },
+  { email: "grenda@example.com", displayName: "Grenda Grendinator", role: "customer" },
+  { email: "eastwest@example.com", displayName: "J’Dinkalage Morgoone", role: "support" },
+  { email: "theo@example.com", displayName: "Theo Beers", role: "admin" },
+] as const satisfies readonly Omit<SeedUser, "passwordHash">[];
+const seededUsers: SeedUser[] = [];
+for (const user of seedUserDefinitions) {
+  seededUsers.push({
+    ...user,
+    passwordHash: await hashPassword(demoPassword),
+  });
 }
 
-const db = getDb();
-
-const existing = db.prepare("SELECT COUNT(*) AS count FROM products").get() as { count: number };
-
-if (existing.count === 0) {
+function seedData(db: DatabaseSync, users: readonly SeedUser[]): void {
   const insertUser = db.prepare(`
     INSERT INTO users (email, display_name, role, password_hash)
     VALUES (?, ?, ?, ?)
   `);
 
-  const demoPasswordHash = hashPassword("password123");
+  for (const user of users) {
+    insertUser.run(user.email, user.displayName, user.role, user.passwordHash);
+  }
 
-  insertUser.run("mabel@example.com", "Mabel Pines", "customer", demoPasswordHash);
-  insertUser.run("sancho@example.com", "Sancho Panza", "support", demoPasswordHash);
-  insertUser.run("wendy@example.com", "Wendy Corduroy", "admin", demoPasswordHash);
-  insertUser.run("scarrasco@example.com", "Samson Carrasco", "customer", demoPasswordHash);
-  insertUser.run("consumptive@example.com", "Clavdia Chauchat", "customer", demoPasswordHash);
-  insertUser.run("pacifica@example.com", "Pacifica Northwest", "customer", demoPasswordHash);
-  insertUser.run("vico@example.com", "Ludovico Settembrini", "customer", demoPasswordHash);
-  insertUser.run("grenda@example.com", "Grenda Grendinator", "customer", demoPasswordHash);
-  insertUser.run("eastwest@example.com", "J’Dinkalage Morgoone", "support", demoPasswordHash);
-  insertUser.run("theo@example.com", "Theo Beers", "admin", demoPasswordHash);
+  db.prepare("UPDATE users SET totp_secret = ? WHERE email = ?").run(
+    "KXDYU6DRQPRQXLPY236SJJXPNGHQJVUF",
+    "wendy@example.com",
+  );
+
+  // Seed Wendy with a passkey credential so CLI checks can simulate passkey login.
+  // The matching private key (PKCS8, P-256) is embedded in the passkey test helper.
+  const wendyId = (
+    db.prepare("SELECT id FROM users WHERE email = ?").get("wendy@example.com") as {
+      id: number;
+    }
+  ).id;
+  db.prepare(`
+    INSERT INTO totp_backup_codes (user_id, code_hash)
+    VALUES (?, ?)
+  `).run(wendyId, hashBackupCode("a6f31c8d94e2b7504d8a1f3c6b9e2075"));
+
+  db.prepare(
+    `INSERT INTO passkey_credentials (user_id, credential_id, public_key, counter, transports)
+       VALUES (?, ?, ?, 0, ?)`,
+  ).run(
+    wendyId,
+    "5kcO4l1a45q4ekBss8CXgyyIcYiofd0Sm4tIo9oZqZ0",
+    "pQECAyYgASFYIHeKpJoZLcCWKRxpQ2DMzjLYhe738ROMLeU7ABISzdJJIlggbYVvviIKz_zGqOiZOYQ-9HWfjWgWdTlS7iDmrB1hOzE",
+    '["internal"]',
+  );
 
   const insertProduct = db.prepare(`
     INSERT INTO products (name, description, image_path, price_cents, cost_cents, inventory_count, is_active)
@@ -183,6 +221,22 @@ if (existing.count === 0) {
     "data/uploads/mystery-shack-tax-exemption.pdf",
     "application/pdf",
   );
+
+  const apiKeysTableExists =
+    db.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'api_keys'").get() !==
+    undefined;
+  if (apiKeysTableExists) {
+    db.prepare(`
+      INSERT INTO api_keys (name, key_hash, scope)
+      VALUES (?, ?, ?)
+    `).run("Warehouse Fulfillment Integration", warehouseApiKeyHash, "orders:read");
+  }
 }
 
-console.log(`Seeded ${databasePath}`);
+const deps = initDependencies();
+try {
+  resetDb(deps.db, (db) => seedData(db, seededUsers));
+  console.log(`Seeded ${deps.databasePath}`);
+} finally {
+  deps.db.close();
+}

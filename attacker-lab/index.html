@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bearly Evil Attacker Lab</title>
+    <link rel="stylesheet" href="/attacker-lab.css" />
+    <script src="/attacker-lab.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <p class="eyebrow">Browser Security Lab</p>
+        <h1>Bearly Evil</h1>
+        <p class="lede">
+          Run Bearly Secure in another terminal session, sign in there, and use this separate origin
+          to explore what an attacker-controlled site can do.
+        </p>
+      </header>
+
+      <form id="target-form" class="target-form">
+        <label for="target-origin">Bearly Secure origin</label>
+        <div class="target-controls">
+          <input
+            id="target-origin"
+            type="url"
+            value="http://localhost:3000"
+            aria-describedby="target-status"
+            required
+          />
+          <button type="submit">Update target</button>
+        </div>
+        <p id="target-status" class="status" aria-live="polite"></p>
+      </form>
+
+      <div class="lab-grid">
+        <section class="lab-card">
+          <h2>Same-origin policy</h2>
+          <p>
+            JavaScript will request the account page with your credentials and then try to read it.
+            The browser's same-origin policy should stop this origin from reading the response.
+          </p>
+          <button id="sop-button" type="button">Try to read account page</button>
+          <pre id="sop-output" class="output" aria-live="polite">Not run yet.</pre>
+        </section>
+
+        <section class="lab-card">
+          <h2>Cross-origin resource sharing</h2>
+          <p>
+            This request targets Bearly Secure's account API. A permissive CORS policy can let an
+            attacker origin read authenticated data that the same-origin policy would otherwise
+            protect.
+          </p>
+          <button id="cors-button" type="button">Try to read account API</button>
+          <pre id="cors-output" class="output" aria-live="polite">Not run yet.</pre>
+        </section>
+
+        <section class="lab-card lab-card-wide">
+          <h2>Cross-site request forgery</h2>
+          <p>
+            This ordinary form submits directly to Bearly Secure. If your authenticated browser
+            accepts the request, product 1 is added to your cart without this site reading the
+            response.
+          </p>
+          <form id="csrf-form" method="post" target="csrf-result">
+            <input type="hidden" name="productId" value="1" />
+            <input type="hidden" name="quantity" value="1" />
+            <button type="submit">Submit forged cart request</button>
+          </form>
+          <p id="csrf-status" class="status" aria-live="polite"></p>
+          <iframe class="result-frame" name="csrf-result" title="Forged request response"></iframe>
+        </section>
+
+        <section class="lab-card lab-card-wide">
+          <h2>Framing and clickjacking</h2>
+          <p>
+            If the account page renders below, an attacker can place the real application inside a
+            deceptive interface. Frame protections should prevent the page from loading here.
+          </p>
+          <div class="frame-shell">
+            <p class="frame-label">Attacker-controlled frame</p>
+            <iframe
+              id="clickjacking-frame"
+              src="about:blank"
+              title="Framed Bearly Secure account page"
+            ></iframe>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

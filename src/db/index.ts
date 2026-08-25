@@ -1,23 +1,15 @@
 import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { applySchema } from "./schema.ts";
 
-const databasePath =
-  process.env.DATABASE_URL ?? join(process.cwd(), "data", "bearly-secure.sqlite");
-
-let db: DatabaseSync | undefined;
-
-export function getDb(): DatabaseSync {
-  if (db) {
+export function openDatabase(path: string): DatabaseSync {
+  mkdirSync(dirname(path), { recursive: true });
+  const db = new DatabaseSync(path);
+  try {
+    db.exec("PRAGMA foreign_keys = ON");
     return db;
+  } catch (error) {
+    db.close();
+    throw error;
   }
-
-  mkdirSync(dirname(databasePath), { recursive: true });
-
-  db = new DatabaseSync(databasePath);
-  db.exec("PRAGMA foreign_keys = ON");
-  applySchema(db);
-
-  return db;
 }

@@ -1,188 +1,224 @@
-import { Router } from "express";
-import { getCartTotalCents, listCartItems, type CartItem } from "../cart/index.ts";
-import { getCurrentSession } from "../auth/sessions.ts";
-import { renderPage } from "../html.ts";
+import type { Dependencies } from "../dependencies.ts";
+import { Router, type Response } from "express";
+import { requireAuth } from "../auth/accessControl.ts";
+import { getCartItemAvailability, listCartItems, type CartItem } from "../cart.ts";
+import { sendErrorPage } from "../errors.ts";
+import { renderCheckoutPage, renderPawPalProcessingPage } from "../views/checkout.ts";
+import { reserveAcornFulfillment } from "../integrations/acornFulfillment.ts";
+import { createPawPalCheckoutUrl, createPawPalReference } from "../integrations/pawpal.ts";
 import { logEvent } from "../logger.ts";
-import { createOrderFromCart, findOrderById } from "../orders/index.ts";
+import { createOrderFromCart, findOrderById, InsufficientInventoryError } from "../orders/index.ts";
 
-export const router = Router();
+export function sendFulfillmentTimeout(
+  response: Response,
+  items: CartItem[],
+  csrfToken: string,
+  displayName: string,
+): void {
+  response
+    .status(503)
+    .set("Retry-After", "1")
+    .type("html")
+    .send(
+      renderCheckoutPage(
+        items,
+        csrfToken,
+        displayName,
+        "Shipping is temporarily unavailable. Try again shortly.",
+      ),
+    );
+}
 
-router.get("/checkout", (req, res) => {
-  const current = getCurrentSession(req.header("cookie"));
-  if (!current) {
-    res.redirect("/login");
-    return;
-  }
+export function createCheckoutRouter(deps: Dependencies): Router {
+  const { db } = deps;
+  const router = Router();
 
-  const items = listCartItems(current.user.id);
-  if (items.length === 0) {
-    res.redirect("/cart");
-    return;
-  }
+  router.get("/checkout", (req, res) => {
+    const current = requireAuth(db, req, res);
+    if (!current) {
+      return;
+    }
 
-  res.type("html").send(renderCheckoutPage(items));
-});
+    const items = listCartItems(db, current.user.id);
+    if (items.length === 0) {
+      res.redirect("/cart");
+      return;
+    }
 
-router.post("/checkout", (req, res) => {
-  const current = getCurrentSession(req.header("cookie"));
-  if (!current) {
-    res.redirect("/login");
-    return;
-  }
+    if (findUnavailableCartItem(items)) {
+      res.redirect("/cart");
+      return;
+    }
 
-  const items = listCartItems(current.user.id);
-  if (items.length === 0) {
-    res.redirect("/cart");
-    return;
-  }
-
-  const shippingName = String(req.body.shippingName ?? "").trim();
-  const shippingAddress = String(req.body.shippingAddress ?? "").trim();
-  const shippingCity = String(req.body.shippingCity ?? "").trim();
-  const shippingRegion = String(req.body.shippingRegion ?? "").trim();
-  const shippingPostalCode = String(req.body.shippingPostalCode ?? "").trim();
-
-  if (
-    !shippingName ||
-    !shippingAddress ||
-    !shippingCity ||
-    !shippingRegion ||
-    !shippingPostalCode
-  ) {
     res
-      .status(400)
       .type("html")
-      .send(renderCheckoutPage(items, "All shipping fields are required"));
-    return;
-  }
-
-  const adminNotes = `PawPal redirect approved. Ship to ${shippingName}, ${shippingAddress}, ${shippingCity}, ${shippingRegion} ${shippingPostalCode}.`;
-  const order = createOrderFromCart(current.user.id, items, adminNotes);
-
-  logEvent("checkout_completed", {
-    userId: current.user.id,
-    email: current.user.email,
-    orderId: order.id,
-    totalCents: order.total_cents,
-    shippingName,
-    shippingAddress,
-    shippingCity,
-    shippingRegion,
-    shippingPostalCode,
-    adminNotes,
+      .send(renderCheckoutPage(items, current.session.csrf_token, current.user.display_name));
   });
 
-  res.redirect(`/pawpal/processing/${order.id}`);
-});
+  router.post("/checkout", async (req, res) => {
+    const current = requireAuth(db, req, res);
+    if (!current) {
+      return;
+    }
 
-router.get("/pawpal/processing/:orderId", (req, res) => {
-  const current = getCurrentSession(req.header("cookie"));
-  if (!current) {
-    res.redirect("/login");
-    return;
+    let items = listCartItems(db, current.user.id);
+    if (items.length === 0) {
+      res.redirect("/cart");
+      return;
+    }
+
+    const unavailableItem = findUnavailableCartItem(items);
+    if (unavailableItem) {
+      res
+        .status(409)
+        .type("html")
+        .send(
+          renderCheckoutPage(
+            items,
+            current.session.csrf_token,
+            current.user.display_name,
+            `${unavailableItem.name} is no longer available in the requested quantity. Update your cart before checking out.`,
+          ),
+        );
+      return;
+    }
+
+    const shippingName = String(req.body.shippingName ?? "").trim();
+    const shippingAddress = String(req.body.shippingAddress ?? "").trim();
+    const shippingCity = String(req.body.shippingCity ?? "").trim();
+    const shippingRegion = String(req.body.shippingRegion ?? "").trim();
+    const shippingPostalCode = String(req.body.shippingPostalCode ?? "").trim();
+    const discountCents = Number(req.body.discountCents ?? 0);
+
+    if (
+      !shippingName ||
+      !shippingAddress ||
+      !shippingCity ||
+      !shippingRegion ||
+      !shippingPostalCode
+    ) {
+      res
+        .status(400)
+        .type("html")
+        .send(
+          renderCheckoutPage(
+            items,
+            current.session.csrf_token,
+            current.user.display_name,
+            "All shipping fields are required",
+          ),
+        );
+      return;
+    }
+
+    const shippingDetails = {
+      name: shippingName,
+      address: shippingAddress,
+      city: shippingCity,
+      region: shippingRegion,
+      postalCode: shippingPostalCode,
+    };
+    await reserveAcornFulfillment(shippingDetails, {
+      delayMs: deps.acornFulfillmentDelayMs,
+    });
+
+    items = listCartItems(db, current.user.id);
+    if (items.length === 0) {
+      res.redirect("/cart");
+      return;
+    }
+
+    const newlyUnavailableItem = findUnavailableCartItem(items);
+    if (newlyUnavailableItem) {
+      res
+        .status(409)
+        .type("html")
+        .send(
+          renderCheckoutPage(
+            items,
+            current.session.csrf_token,
+            current.user.display_name,
+            `${newlyUnavailableItem.name} is no longer available in the requested quantity. Update your cart before checking out.`,
+          ),
+        );
+      return;
+    }
+
+    const adminNotes = "Awaiting PawPal payment.";
+    let order: ReturnType<typeof createOrderFromCart>;
+    try {
+      order = createOrderFromCart(
+        db,
+        current.user.id,
+        items,
+        discountCents,
+        shippingDetails,
+        adminNotes,
+        deps.keyring,
+      );
+    } catch (error) {
+      if (!(error instanceof InsufficientInventoryError)) {
+        throw error;
+      }
+
+      const currentItems = listCartItems(db, current.user.id);
+      res
+        .status(409)
+        .type("html")
+        .send(
+          renderCheckoutPage(
+            currentItems,
+            current.session.csrf_token,
+            current.user.display_name,
+            error.message,
+          ),
+        );
+      return;
+    }
+
+    const pawPalReference = createPawPalReference(order.id, order.total_cents);
+
+    logEvent("checkout_started", {
+      userId: current.user.id,
+      email: current.user.email,
+      orderId: order.id,
+      totalCents: order.total_cents,
+      pawPalReference,
+      shippingName,
+      shippingAddress,
+      shippingCity,
+      shippingRegion,
+      shippingPostalCode,
+      adminNotes,
+    });
+
+    res.redirect(createPawPalCheckoutUrl(order.id));
+  });
+
+  function findUnavailableCartItem(items: CartItem[]): CartItem | undefined {
+    return items.find((item) => getCartItemAvailability(item) !== "available");
   }
 
-  const orderId = Number(req.params.orderId);
-  const order = Number.isInteger(orderId) ? findOrderById(orderId) : undefined;
+  router.get("/pawpal/processing/:orderId", (req, res) => {
+    const current = requireAuth(db, req, res);
+    if (!current) {
+      return;
+    }
 
-  if (!order || order.user_id !== current.user.id) {
-    res.status(404).send("Order not found");
-    return;
-  }
+    const orderId = Number(req.params.orderId);
+    const order = Number.isSafeInteger(orderId) ? findOrderById(db, orderId) : undefined;
 
-  res.type("html").send(renderPawPalProcessingPage(orderId));
-});
+    if (!order || order.user_id !== current.user.id) {
+      sendErrorPage(res, 404, "Order Not Found", "We couldn't find that order.");
+      return;
+    }
 
-function renderCheckoutPage(items: CartItem[], error?: string): string {
-  const errorMessage = error ? `<p class="error">${error}</p>` : "";
-  const itemList = items
-    .map(
-      (item) => `<li class="checkout-item">
-              <div class="checkout-item-details">
-                <strong>${item.name}</strong>
-                <span class="checkout-item-meta">Qty ${item.quantity} × ${formatMoney(item.price_cents)}</span>
-              </div>
-              <strong>${formatMoney(item.line_total_cents)}</strong>
-            </li>
-            `,
-    )
-    .join("")
-    .trimEnd();
+    res
+      .type("html")
+      .send(
+        renderPawPalProcessingPage(orderId, String(res.locals.cspNonce), current.user.display_name),
+      );
+  });
 
-  return renderPage(
-    "Checkout",
-    `<nav class="nav-links">
-        <a href="/cart">Back to cart</a>
-        <a href="/">Store</a>
-      </nav>
-      <p class="eyebrow">PawPal Checkout</p>
-      <h1>Checkout</h1>
-      ${errorMessage}
-      <section class="card-grid">
-        <article class="card">
-          <h2>Order Summary</h2>
-          <ul class="checkout-items">
-            ${itemList}
-          </ul>
-          <h3>Total: ${formatMoney(getCartTotalCents(items))}</h3>
-        </article>
-        <article class="card">
-          <h2>Shipping</h2>
-          <form method="post" action="/checkout" class="checkout-form">
-            <label>
-              Name
-              <input name="shippingName" type="text" required>
-            </label>
-            <label>
-              Street address
-              <input name="shippingAddress" type="text" required>
-            </label>
-            <label>
-              City
-              <input name="shippingCity" type="text" required>
-            </label>
-            <label>
-              State
-              <input name="shippingRegion" type="text" required>
-            </label>
-            <label>
-              Postal code
-              <input name="shippingPostalCode" type="text" required>
-            </label>
-            <section class="pawpal-box">
-              <h3>Payment</h3>
-              <p>When you click “Place order,” you’ll be redirected to PawPal for payment.</p>
-            </section>
-            <button type="submit">Place order</button>
-          </form>
-        </article>
-      </section>`,
-  );
+  return router;
 }
-
-function formatMoney(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function renderPawPalProcessingPage(orderId: number): string {
-  return renderPage(
-    "PawPal Processing",
-    `
-      <section class="pawpal-processing" aria-live="polite">
-        ${pawPalLogoSvg}
-        <p class="eyebrow">PawPal</p>
-        <h1>Checking your honey balance...</h1>
-        <p class="lede">Payment approved! Sending you back to Bearly Secure.</p>
-        <div class="pawpal-loader" aria-hidden="true"></div>
-        <a class="button-link" href="/orders/${orderId}">Return to your order</a>
-      </section>
-      <script>
-        setTimeout(() => {
-          window.location.assign("/orders/${orderId}");
-        }, 2000);
-      </script>
-    `,
-  );
-}
-
-const pawPalLogoSvg = `<svg class="pawpal-logo" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PawPal shield logo" viewBox="0 0 250 250" fill="currentColor"><path d="M119.2 30c-14.4 13.5-42.6 24.4-73.5 28.5l-4.7.6v34.4c0 26.8.3 36.1 1.6 42.5 5.5 29.2 24.3 56.8 50.5 74.3 9.4 6.2 15.7 9.3 26.5 12.7l7.1 2.3 11.5-5.5c6.3-3.1 15-7.9 19.3-10.8 9.5-6.4 22.8-19 29.6-28 6.4-8.4 15.1-26 18.6-37.5 2.7-9 2.7-9.1 3.1-46.7l.3-37.7-4.8-.6c-33-4.7-59.3-15.1-75.2-29.8-2.2-2-4.1-3.7-4.3-3.7-.2.1-2.7 2.3-5.6 5m-9.5 48.1c13.3 5 15.4 26 3.1 30.7-3.5 1.3-4.1 1.3-8.5-.9-3.9-1.9-5.3-3.4-7.5-7.8-3.3-6.4-3.5-10-.8-15.9 1.3-2.9 3-4.7 5.2-5.7 4-1.7 4.9-1.8 8.5-.4m38.6.3c11.6 4.8 9.1 25.2-3.6 30.1-4 1.5-4.7 1.5-8 .1-5.6-2.3-7.9-6.8-7.5-14.3.3-5.1.9-6.9 3.4-10 2.9-3.7 8.5-7.3 11.2-7.3.7 0 2.7.6 4.5 1.4m-61 28.7c5.8 3 10.3 9.1 10.7 14.4.5 6.6-.1 8.7-2.9 11.6-4.9 4.8-14.2 3.8-19.7-2.3-3.5-3.8-5.4-8.4-5.4-13.2 0-3.6.6-5.2 3.1-8.1 2.7-3 3.7-3.5 7.6-3.5 2.4 0 5.4.5 6.6 1.1m87.7.2c6.8 5.3 6.6 15.9-.4 23.5-3.2 3.6-7 5.2-12.1 5.2-3.8 0-5.2-.5-7.6-2.9-2.8-2.9-3.4-5-2.9-11.6.4-5.2 4.7-11.1 10.5-14.3 2.7-1.5 10.6-1.4 12.5.1m-43.9 13.8c5.9 2 9.3 5.4 13.1 13 2.7 5.4 5.3 8.8 9.2 12.2 6.5 5.6 8.2 9.7 6.6 15.6-1.2 4.7-5.5 8.6-11.1 10.1-4.4 1.2-7.4.6-14.4-3-5.6-2.9-13.8-2.7-19.9.4-6.7 3.4-9.1 3.8-13.8 2.5-5.4-1.4-10.3-6.3-11.2-11.2-1-5.1 2.1-11.2 7.7-15.2 2.9-2.2 5.3-5.3 8.3-11 2.3-4.3 5.4-8.9 7-10.1 5.6-4.2 12.2-5.4 18.5-3.3"/></svg>`;
