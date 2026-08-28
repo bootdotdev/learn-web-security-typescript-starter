@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import type { Dependencies } from "../dependencies.ts";
 import { safeReturnTo } from "../auth/accessControl.ts";
 import { hashPassword, MAX_PASSWORD_LENGTH, verifyPassword } from "../auth/passwords.ts";
@@ -42,6 +42,21 @@ import {
   renderTotpLoginPage as renderTotpLoginView,
 } from "../views/auth.ts";
 import { logEvent } from "../logger.ts";
+
+type AuthenticationLogFields = {
+  success: boolean;
+  userId?: number;
+  [key: string]: unknown;
+};
+
+function logAuthenticationEvent(
+  _req: Request,
+  _res: Response,
+  eventName: "login_attempt" | "password_reset_request",
+  fields: AuthenticationLogFields,
+): void {
+  logEvent(eventName, fields);
+}
 
 export function createAuthRouter(deps: Dependencies): Router {
   const { db, appOrigin } = deps;
@@ -158,7 +173,7 @@ export function createAuthRouter(deps: Dependencies): Router {
     const user = findUserByEmail(db, email);
 
     if (!user || !(await verifyPassword(password, user.password_hash))) {
-      logEvent("login_attempt", {
+      logAuthenticationEvent(req, res, "login_attempt", {
         email,
         success: false,
         failureReason: !user ? "email not found" : "password mismatch",
@@ -180,7 +195,7 @@ export function createAuthRouter(deps: Dependencies): Router {
 
     const session = createSession(db, user.id);
 
-    logEvent("login_attempt", {
+    logAuthenticationEvent(req, res, "login_attempt", {
       email: user.email,
       userId: user.id,
       role: user.role,
@@ -214,7 +229,7 @@ export function createAuthRouter(deps: Dependencies): Router {
     }
 
     const user = findUserById(db, challenge.user_id);
-    const totpSecret = user ? getTotpSecret(db, user.id) : undefined;
+    const totpSecret = user ? getTotpSecret(db, user.id, deps.keyring) : undefined;
     if (!user || !totpSecret) {
       deleteTotpLoginChallenge(db, challengeToken);
       clearTotpLoginChallengeCookie(res);
@@ -225,7 +240,7 @@ export function createAuthRouter(deps: Dependencies): Router {
     const mfaCode = String(req.body.mfaCode ?? "").trim();
     if (!verifyAndConsumeTotpCode(db, user.id, mfaCode, totpSecret)) {
       const challengeExhausted = recordTotpLoginChallengeFailure(db, challengeToken);
-      logEvent("login_attempt", {
+      logAuthenticationEvent(req, res, "login_attempt", {
         email: user.email,
         userId: user.id,
         success: false,
@@ -248,7 +263,7 @@ export function createAuthRouter(deps: Dependencies): Router {
     deleteTotpLoginChallenge(db, challengeToken);
     const session = createSession(db, user.id);
 
-    logEvent("login_attempt", {
+    logAuthenticationEvent(req, res, "login_attempt", {
       email: user.email,
       userId: user.id,
       role: user.role,
@@ -333,7 +348,7 @@ export function createAuthRouter(deps: Dependencies): Router {
     const user = findUserByEmail(db, email);
 
     if (!user) {
-      logEvent("password_reset_request", {
+      logAuthenticationEvent(req, res, "password_reset_request", {
         email,
         success: false,
         failureReason: "email not found",
@@ -348,7 +363,7 @@ export function createAuthRouter(deps: Dependencies): Router {
       console.log(`Bear Mail to ${email}:\nReset your password: ${resetLink}`);
     }
 
-    logEvent("password_reset_request", {
+    logAuthenticationEvent(req, res, "password_reset_request", {
       email: user.email,
       userId: user.id,
       success: true,

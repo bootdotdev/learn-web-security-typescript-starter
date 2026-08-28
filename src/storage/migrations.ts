@@ -2,7 +2,13 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { storeTaxDocument } from "../uploads/taxDocuments.ts";
-import { deserializeEncryptedPayload, type Keyring } from "./keyring.ts";
+import { deserializeEncryptedPayload, encryptStringWithKeyring, type Keyring } from "./keyring.ts";
+
+type TotpSecretRow = {
+  id: number;
+  totp_secret: string | null;
+  pending_totp_secret: string | null;
+};
 
 type PlaintextTaxDocumentRow = {
   id: number;
@@ -26,8 +32,59 @@ export function migrateSensitiveDataAtRest(
     return;
   }
 
+  migrateTotpSecrets(database, keyring);
   migrateTaxDocumentTable(database, keyring, "uploaded_files");
   migrateTaxDocumentTable(database, keyring, "imported_tax_documents");
+}
+
+function migrateTotpSecrets(database: DatabaseSync, keyring: Keyring): void {
+  const rows = database
+    .prepare(
+      `
+        SELECT id, totp_secret, pending_totp_secret
+        FROM users
+        WHERE totp_secret IS NOT NULL OR pending_totp_secret IS NOT NULL
+      `,
+    )
+    .all() as unknown as TotpSecretRow[];
+  const update = database.prepare(
+    `
+      UPDATE users
+      SET totp_secret = ?, pending_totp_secret = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+  );
+
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    for (const row of rows) {
+      const totpSecret = encryptPlaintextTotpSecret(row.totp_secret, keyring);
+      const pendingTotpSecret = encryptPlaintextTotpSecret(row.pending_totp_secret, keyring);
+      if (totpSecret !== row.totp_secret || pendingTotpSecret !== row.pending_totp_secret) {
+        update.run(totpSecret, pendingTotpSecret, row.id);
+      }
+    }
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+function encryptPlaintextTotpSecret(value: string | null, keyring: Keyring): string | null {
+  if (!value || isSerializedEncryptedValue(value)) {
+    return value;
+  }
+  return encryptStringWithKeyring(value, keyring);
+}
+
+function isSerializedEncryptedValue(value: string): boolean {
+  try {
+    deserializeEncryptedPayload(Buffer.from(value, "utf8"));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function migrateTaxDocumentTable(

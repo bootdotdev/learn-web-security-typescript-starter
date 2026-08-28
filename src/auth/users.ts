@@ -1,4 +1,9 @@
 import type { DatabaseSync } from "node:sqlite";
+import {
+  decryptStringWithKeyring,
+  encryptStringWithKeyring,
+  type Keyring,
+} from "../storage/keyring.ts";
 import { hashPassword } from "./passwords.ts";
 
 type UserRole = "customer" | "support" | "admin";
@@ -100,22 +105,35 @@ export async function updateUserPassword(
   ).run(passwordHash, userId);
 }
 
-export function getTotpSecret(db: DatabaseSync, userId: number): string | undefined {
-  return getStoredTotpSecret(db, userId, "totp_secret");
+export function getTotpSecret(
+  db: DatabaseSync,
+  userId: number,
+  keyring: Keyring | undefined,
+): string | undefined {
+  return getDecryptedTotpSecret(db, userId, "totp_secret", keyring);
 }
 
-export function getPendingTotpSecret(db: DatabaseSync, userId: number): string | undefined {
-  return getStoredTotpSecret(db, userId, "pending_totp_secret");
+export function getPendingTotpSecret(
+  db: DatabaseSync,
+  userId: number,
+  keyring: Keyring | undefined,
+): string | undefined {
+  return getDecryptedTotpSecret(db, userId, "pending_totp_secret", keyring);
 }
 
-export function setPendingTotpSecret(db: DatabaseSync, userId: number, secret: string): void {
+export function setPendingTotpSecret(
+  db: DatabaseSync,
+  userId: number,
+  secret: string,
+  keyring: Keyring | undefined,
+): void {
   db.prepare(
     `
         UPDATE users
         SET pending_totp_secret = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
-  ).run(secret, userId);
+  ).run(encryptStringWithKeyring(secret, keyring), userId);
 }
 
 export function confirmTotpSecret(db: DatabaseSync, userId: number): void {
@@ -164,15 +182,16 @@ export function updateUserEmail(db: DatabaseSync, userId: number, email: string)
   ).run(email, userId);
 }
 
-function getStoredTotpSecret(
+function getDecryptedTotpSecret(
   db: DatabaseSync,
   userId: number,
   column: "totp_secret" | "pending_totp_secret",
+  keyring: Keyring | undefined,
 ): string | undefined {
   const row = db.prepare(`SELECT ${column} AS secret FROM users WHERE id = ?`).get(userId) as
     | { secret: string | null }
     | undefined;
-  return row?.secret ?? undefined;
+  return row?.secret ? decryptStringWithKeyring(row.secret, keyring) : undefined;
 }
 
 function mapUser(

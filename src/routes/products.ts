@@ -3,6 +3,7 @@ import type { Dependencies } from "../dependencies.ts";
 import { requireAuth } from "../auth/accessControl.ts";
 import { getCurrentSession } from "../auth/sessions.ts";
 import { listCartItems } from "../cart.ts";
+import { csrfTokensMatch } from "../csrf.ts";
 import { sendErrorPage } from "../errors.ts";
 import { findProductById } from "../products.ts";
 import { createReview, listReviewsForProduct, parseReviewBody } from "../reviews.ts";
@@ -38,6 +39,11 @@ export function createProductsRouter(deps: Dependencies): Router {
   router.post("/products/:id/reviews", (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) {
+      return;
+    }
+
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
       return;
     }
 

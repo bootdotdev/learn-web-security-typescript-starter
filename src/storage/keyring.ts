@@ -68,6 +68,14 @@ export function requireKeyring(keyring: Keyring | undefined): Keyring {
   return keyring;
 }
 
+export function encryptStringWithKeyring(value: string, _keyring: Keyring | undefined): string {
+  return value;
+}
+
+export function decryptStringWithKeyring(value: string, _keyring: Keyring | undefined): string {
+  return value;
+}
+
 export function serializeEncryptedPayload(payload: VersionedEncryptedPayload): Buffer {
   return Buffer.from(
     JSON.stringify({

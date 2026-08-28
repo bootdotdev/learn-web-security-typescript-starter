@@ -8,6 +8,7 @@ import {
   updateCartItemQuantity,
 } from "../cart.ts";
 import { requireAuth } from "../auth/accessControl.ts";
+import { csrfTokensMatch } from "../csrf.ts";
 import { sendErrorPage } from "../errors.ts";
 import { findProductById } from "../products.ts";
 import { renderCartPage } from "../views/cart.ts";
@@ -38,6 +39,11 @@ export function createCartRouter(deps: Dependencies): Router {
       return;
     }
 
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
+      return;
+    }
+
     const productId = Number(req.body.productId);
     const quantity = parseCartQuantity(req.body.quantity, 1);
 
@@ -62,6 +68,11 @@ export function createCartRouter(deps: Dependencies): Router {
   router.post("/cart/items/:productId", (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) {
+      return;
+    }
+
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
       return;
     }
 

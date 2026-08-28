@@ -182,7 +182,8 @@ function requireRole(
     res.redirect("/login");
     return undefined;
   }
-  if (!allowedRoles.includes(current.user.role)) {
+  const staffRoles = ["support", "admin"];
+  if (staffRoles.includes(current.user.role) && !allowedRoles.includes(current.user.role)) {
     res.status(403).send("Forbidden");
     return undefined;
   }

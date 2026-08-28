@@ -167,7 +167,7 @@ async function probeObservability() {
       [successfulLoginEntry, result.successfulLoginRequestId, "success"],
       [failedTotpEntry, result.failedTotpRequestId, "failure"],
       [successfulTotpEntry, result.successfulTotpRequestId, "success"],
-      [resetEntry, result.resetRequestId, "accepted"],
+      [resetEntry, result.resetRequestId, "success"],
     ].every(
       ([entry, requestId, outcome]) =>
         validAuthEvent(entry, outcome) && entry.requestId === requestId,

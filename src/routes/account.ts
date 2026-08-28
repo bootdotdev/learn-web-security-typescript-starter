@@ -15,6 +15,7 @@ import {
   setPendingTotpSecret,
   updateUserEmail,
 } from "../auth/users.ts";
+import { csrfTokensMatch } from "../csrf.ts";
 import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
 import { logEvent } from "../logger.ts";
@@ -28,6 +29,7 @@ import {
 } from "../reviews.ts";
 import { createUploadedFile, listUploadedFilesForUser } from "../uploads/index.ts";
 import { createUploadMiddleware } from "../uploads/middleware.ts";
+import type { Keyring } from "../storage/keyring.ts";
 import { storeTaxDocument } from "../uploads/taxDocuments.ts";
 import {
   renderAccountPage,
@@ -40,9 +42,9 @@ import {
 } from "../views/account.ts";
 
 export function createAccountRouter(deps: Dependencies): Router {
-  const { db } = deps;
+  const { db, keyring } = deps;
   const router = Router();
-  const uploadTaxDocument = createUploadMiddleware(5 * 1024 * 1024, "document");
+  const uploadTaxDocument = createUploadMiddleware("document");
 
   router.get("/account", (req, res) => {
     const current = requireAuth(db, req, res);
@@ -59,7 +61,9 @@ export function createAccountRouter(deps: Dependencies): Router {
         .send(renderTotpEnabledPage(current.user.display_name, current.session.csrf_token));
       return;
     }
-    const secret = getPendingTotpSecret(db, current.user.id) ?? startTotpEnrollment(db, current);
+    const secret =
+      getPendingTotpSecret(db, current.user.id, keyring) ??
+      startTotpEnrollment(db, current, keyring);
     const qrDataUrl = await QRCode.toDataURL(
       generateURI({ issuer: "Bearly Secure", label: current.user.email, secret }),
     );
@@ -69,7 +73,7 @@ export function createAccountRouter(deps: Dependencies): Router {
   router.post("/account/totp/confirm", async (req, res) => {
     const current = requireRecentAuth(db, req, res, "/account/totp");
     if (!current) return;
-    const pendingSecret = getPendingTotpSecret(db, current.user.id);
+    const pendingSecret = getPendingTotpSecret(db, current.user.id, keyring);
     if (!pendingSecret) {
       res.redirect("/account/totp");
       return;
@@ -102,6 +106,10 @@ export function createAccountRouter(deps: Dependencies): Router {
   router.post("/account/totp/disable", (req, res) => {
     const current = requireRecentAuth(db, req, res, "/account/totp");
     if (!current) return;
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
+      return;
+    }
     if (!current.user.has_totp) {
       res.redirect("/account");
       return;
@@ -114,6 +122,10 @@ export function createAccountRouter(deps: Dependencies): Router {
   router.post("/account/email", (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) return;
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
+      return;
+    }
     const currentPassword = String(req.body.currentPassword ?? "");
     if (!currentPassword) {
       res
@@ -211,6 +223,10 @@ export function createAccountRouter(deps: Dependencies): Router {
   router.post("/account/reviews/:id", (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) return;
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
+      return;
+    }
     const review = requireOwnedReview(db, req, res);
     if (!review) return;
     const rating = Number(req.body.rating);
@@ -236,6 +252,10 @@ export function createAccountRouter(deps: Dependencies): Router {
   router.post("/account/reviews/:id/delete", (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) return;
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
+      return;
+    }
     const review = requireOwnedReview(db, req, res);
     if (!review) return;
     deleteReview(db, review.id);
@@ -245,9 +265,13 @@ export function createAccountRouter(deps: Dependencies): Router {
   return router;
 }
 
-function startTotpEnrollment(db: DatabaseSync, current: CurrentSession): string {
+function startTotpEnrollment(
+  db: DatabaseSync,
+  current: CurrentSession,
+  keyring: Keyring | undefined,
+): string {
   const secret = generateSecret();
-  setPendingTotpSecret(db, current.user.id, secret);
+  setPendingTotpSecret(db, current.user.id, secret, keyring);
   logEvent("totp_enrollment_started", { userId: current.user.id, email: current.user.email });
   return secret;
 }
