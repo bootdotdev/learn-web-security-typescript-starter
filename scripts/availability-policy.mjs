@@ -39,12 +39,9 @@ switch (mode) {
   case "load-shedding":
     result = await probeLoadShedding();
     break;
-  case "bot-risk":
-    result = await probeBotRisk();
-    break;
   default:
     throw new Error(
-      "Usage: node scripts/availability-policy.mjs <global-rate-limit|endpoint-rate-limit|auth-rate-limit|search-throttle|resource-limits|timeouts|api-key-quota|load-shedding|bot-risk>",
+      "Usage: node scripts/availability-policy.mjs <global-rate-limit|endpoint-rate-limit|auth-rate-limit|search-throttle|resource-limits|timeouts|api-key-quota|load-shedding>",
     );
 }
 
@@ -843,54 +840,6 @@ async function probeLoadShedding() {
         healthRoutePosition < loadShedderPosition,
     };
   });
-}
-
-async function probeBotRisk() {
-  const { calculateBotRisk } = await import("../src/security/botRisk.ts");
-  const browserSignals = {
-    userAgent: "Mozilla/5.0",
-    accept: "text/html",
-    acceptLanguage: "en-US",
-  };
-  const signupFormHasHoneypot = await withTemporaryApp(
-    "bearly-secure-bot-risk-",
-    async (origin) => {
-      const signupPage = await (await fetch(`${origin}/signup`)).text();
-      return (
-        signupPage.includes('name="companyWebsite"') &&
-        signupPage.includes('tabindex="-1"') &&
-        signupPage.includes('autocomplete="off"')
-      );
-    },
-  );
-
-  return {
-    low: calculateBotRisk(browserSignals),
-    honeypot: calculateBotRisk({ ...browserSignals, honeypot: "https://spam.example" }),
-    automation: calculateBotRisk({
-      userAgent: "curl/8.0",
-      accept: "text/html",
-      acceptLanguage: "en-US",
-    }),
-    missingUserAgent: calculateBotRisk({
-      accept: "text/html",
-      acceptLanguage: "en-US",
-    }),
-    headless: calculateBotRisk({
-      ...browserSignals,
-      userAgent: "Mozilla/5.0 HeadlessChrome/123.0",
-    }),
-    missingAcceptLanguage: calculateBotRisk({
-      userAgent: "Mozilla/5.0",
-      accept: "text/html",
-    }),
-    nonHtmlAccept: calculateBotRisk({
-      userAgent: "Mozilla/5.0",
-      accept: "application/json",
-      acceptLanguage: "en-US",
-    }),
-    signupFormHasHoneypot,
-  };
 }
 
 async function withServer(app, probe) {

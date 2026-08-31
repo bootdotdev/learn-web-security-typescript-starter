@@ -264,17 +264,39 @@ async function probeDamageControl() {
     insertProbeSession("new-session", "2030-01-02T00:00:00.900Z");
     insertProbeSession("already-revoked-session", "2030-01-01T00:00:00.000Z", originalRevokedAt);
 
+    const currentDatabaseTime = () =>
+      database.prepare("SELECT CURRENT_TIMESTAMP AS currentTime").get().currentTime;
+    const databaseTimeBefore = currentDatabaseTime();
     const revoked = revokeAllActiveSessions(database);
+    const databaseTimeAfter = currentDatabaseTime();
     const repeatRevocationNoChanges = revokeAllActiveSessions(database) === 0;
     const storedRevokedAt = database
       .prepare("SELECT revoked_at FROM sessions WHERE token_hash = ?")
       .get(fastHash("already-revoked-session")).revoked_at;
+    const activeRevocationTimestamps = database
+      .prepare(
+        `
+          SELECT
+            COUNT(DISTINCT revoked_at) AS distinctTimestampCount,
+            MIN(revoked_at) AS earliestRevocation,
+            MAX(revoked_at) AS latestRevocation
+          FROM sessions
+          WHERE token_hash IN (?, ?, ?)
+        `,
+      )
+      .get(fastHash("old-session"), fastHash("boundary-session"), fastHash("new-session"));
 
     return {
       revoked,
       oldSessionActive: Boolean(getCurrentSession(database, "session_id=old-session")),
       boundarySessionActive: Boolean(getCurrentSession(database, "session_id=boundary-session")),
       newSessionActive: Boolean(getCurrentSession(database, "session_id=new-session")),
+      revocationTimestampMatchesDatabaseClock:
+        Number(activeRevocationTimestamps.distinctTimestampCount) === 1 &&
+        typeof activeRevocationTimestamps.earliestRevocation === "string" &&
+        activeRevocationTimestamps.earliestRevocation >= databaseTimeBefore &&
+        typeof activeRevocationTimestamps.latestRevocation === "string" &&
+        activeRevocationTimestamps.latestRevocation <= databaseTimeAfter,
       alreadyRevokedSessionUnchanged: storedRevokedAt === originalRevokedAt,
       repeatRevocationNoChanges,
     };
@@ -553,10 +575,6 @@ async function probeSecurityTxt() {
       oneYearFromNow.setUTCFullYear(oneYearFromNow.getUTCFullYear() + 1);
 
       return {
-        status: response.status,
-        contentTypeIsPlainText: response.headers.get("content-type")?.startsWith("text/plain"),
-        contactPresent: lines.includes("Contact: mailto:security@bearlysecure.example"),
-        policyPresent: lines.includes("Policy: https://bearlysecure.example/security-policy"),
         oneExpiresField: expiresFields.length === 1,
         expiresIsRfc3339: Number.isFinite(expiresAt),
         expiresIsFuture: Number.isFinite(expiresAt) && expiresAt > checkedAt.getTime(),
