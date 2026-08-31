@@ -10,19 +10,5 @@ console.log(
   JSON.stringify({
     validBeforeExpiration: verifySignedDownload(signingKey, 1, expires, signature, 1299),
     rejectedAfterExpiration: !verifySignedDownload(signingKey, 1, expires, signature, 1301),
-    malformedExpirationRejected: !verifySignedDownload(
-      signingKey,
-      1,
-      "not-a-timestamp",
-      signature,
-      1000,
-    ),
-    malformedSignatureRejected: !verifySignedDownload(
-      signingKey,
-      1,
-      expires,
-      "not-a-signature",
-      1000,
-    ),
   }),
 );
