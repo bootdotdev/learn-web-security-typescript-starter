@@ -5,7 +5,10 @@ import { requireAuth, requireRole } from "../auth/accessControl.ts";
 import { sendErrorPage } from "../errors.ts";
 import { findUploadedFileById } from "../uploads/index.ts";
 import { findImportedTaxDocumentById } from "../uploads/importedTaxDocuments.ts";
-import { createSignedDownloadPath, verifySignedDownload } from "../uploads/signedDownloads.ts";
+import {
+  createSignedDownloadPath,
+  verifySignedDownload,
+} from "../uploads/signedDownloads.ts";
 
 export function createFilesRouter(deps: Dependencies): Router {
   const { db } = deps;
@@ -34,8 +37,10 @@ export function createFilesRouter(deps: Dependencies): Router {
 
   router.get("/files/:id/signed-download", (req, res) => {
     const fileId = Number(req.params.id);
-    const expires = typeof req.query.expires === "string" ? req.query.expires : "";
-    const signature = typeof req.query.signature === "string" ? req.query.signature : "";
+    const expires =
+      typeof req.query.expires === "string" ? req.query.expires : "";
+    const signature =
+      typeof req.query.signature === "string" ? req.query.signature : "";
 
     if (
       !Number.isSafeInteger(fileId) ||
@@ -73,13 +78,19 @@ export function createFilesRouter(deps: Dependencies): Router {
       return;
     }
 
-    const importedDocument = findImportedTaxDocumentById(db, importedDocumentId);
+    const importedDocument = findImportedTaxDocumentById(
+      db,
+      importedDocumentId,
+    );
     if (!importedDocument) {
       sendErrorPage(res, 404, "File Not Found", "We couldn't find that file.");
       return;
     }
 
-    const plaintext = readTaxDocument(importedDocument.storage_path, deps.keyring);
+    const plaintext = readTaxDocument(
+      importedDocument.storage_path,
+      deps.keyring,
+    );
     res.attachment(importedDocument.original_name);
     res.type(importedDocument.content_type).send(plaintext);
   });

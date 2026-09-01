@@ -28,7 +28,10 @@ import {
   verifyRegistrationResponse,
 } from "../auth/passkeys.ts";
 import { findUserById } from "../auth/users.ts";
-import { renderPasskeyLoginPage, renderPasskeyManagePage } from "../views/passkey.ts";
+import {
+  renderPasskeyLoginPage,
+  renderPasskeyManagePage,
+} from "../views/passkey.ts";
 import { sendErrorPage } from "../errors.ts";
 import { logEvent } from "../logger.ts";
 
@@ -72,11 +75,14 @@ export function createPasskeyRouter(deps: Dependencies): Router {
       res
         .status(400)
         .type("html")
-        .send(renderPasskeyLoginPage("Challenge expired. Try again.", returnTo));
+        .send(
+          renderPasskeyLoginPage("Challenge expired. Try again.", returnTo),
+        );
       return;
     }
 
-    const credentialId = typeof assertionBody.id === "string" ? assertionBody.id : undefined;
+    const credentialId =
+      typeof assertionBody.id === "string" ? assertionBody.id : undefined;
     if (!credentialId) {
       res
         .status(400)
@@ -103,7 +109,9 @@ export function createPasskeyRouter(deps: Dependencies): Router {
         counter: credential.counter,
         ...(credential.transports
           ? {
-              transports: JSON.parse(credential.transports) as AuthenticatorTransport[],
+              transports: JSON.parse(
+                credential.transports,
+              ) as AuthenticatorTransport[],
             }
           : {}),
       },
@@ -113,7 +121,9 @@ export function createPasskeyRouter(deps: Dependencies): Router {
     try {
       verification = {
         verified: false,
-        authenticationInfo: { newCounter: passkeyVerificationInput.credential.counter },
+        authenticationInfo: {
+          newCounter: passkeyVerificationInput.credential.counter,
+        },
       };
     } catch (error) {
       logEvent("passkey_login_failed", { credentialId, error: String(error) });
@@ -133,11 +143,18 @@ export function createPasskeyRouter(deps: Dependencies): Router {
       return;
     }
 
-    updatePasskeyCounter(db, credential.credential_id, verification.authenticationInfo.newCounter);
+    updatePasskeyCounter(
+      db,
+      credential.credential_id,
+      verification.authenticationInfo.newCounter,
+    );
 
     const user = findUserById(db, credential.user_id);
     if (!user) {
-      res.status(500).type("html").send(renderPasskeyLoginPage("User not found.", returnTo));
+      res
+        .status(500)
+        .type("html")
+        .send(renderPasskeyLoginPage("User not found.", returnTo));
       return;
     }
 
@@ -166,7 +183,9 @@ export function createPasskeyRouter(deps: Dependencies): Router {
     }
 
     const credentials = listPasskeyCredentials(db, current.user.id);
-    res.type("html").send(renderPasskeyManagePage(credentials, current.user.display_name));
+    res
+      .type("html")
+      .send(renderPasskeyManagePage(credentials, current.user.display_name));
   });
 
   router.post("/account/passkey/begin", async (req, res) => {
@@ -176,7 +195,9 @@ export function createPasskeyRouter(deps: Dependencies): Router {
       return;
     }
     if (!hasRecentAuthentication(current)) {
-      res.status(403).json({ error: "Log in again before registering a passkey" });
+      res
+        .status(403)
+        .json({ error: "Log in again before registering a passkey" });
       return;
     }
 
@@ -225,7 +246,10 @@ export function createPasskeyRouter(deps: Dependencies): Router {
       return;
     }
 
-    const { challengeId, ...registrationBody } = req.body as Record<string, unknown>;
+    const { challengeId, ...registrationBody } = req.body as Record<
+      string,
+      unknown
+    >;
 
     const stored = consumeChallenge(db, String(challengeId ?? ""));
     if (!stored || stored.user_id !== current.user.id) {
@@ -314,7 +338,12 @@ export function createPasskeyRouter(deps: Dependencies): Router {
 
     const id = Number(req.params.id);
     if (!Number.isSafeInteger(id)) {
-      sendErrorPage(res, 404, "Passkey Not Found", "We couldn't find that passkey.");
+      sendErrorPage(
+        res,
+        404,
+        "Passkey Not Found",
+        "We couldn't find that passkey.",
+      );
       return;
     }
 

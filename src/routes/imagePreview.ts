@@ -31,20 +31,35 @@ export function createImagePreviewRouter(deps: Dependencies): Router {
       res
         .status(400)
         .type("html")
-        .send(renderImagePreviewPage(current.user.display_name, "Enter an image URL."));
+        .send(
+          renderImagePreviewPage(
+            current.user.display_name,
+            "Enter an image URL.",
+          ),
+        );
       return;
     }
 
     try {
-      const result = await fetchRemoteImagePreview(imageUrl, deps.maxUploadBytes);
+      const result = await fetchRemoteImagePreview(
+        imageUrl,
+        deps.maxUploadBytes,
+      );
 
-      res.type("html").send(renderImagePreviewPage(current.user.display_name, undefined, result));
+      res
+        .type("html")
+        .send(
+          renderImagePreviewPage(current.user.display_name, undefined, result),
+        );
     } catch (error) {
       const message =
         error instanceof RemoteImagePreviewError
           ? error.message
           : "Bearly Secure could not fetch that URL.";
-      res.status(502).type("html").send(renderImagePreviewPage(current.user.display_name, message));
+      res
+        .status(502)
+        .type("html")
+        .send(renderImagePreviewPage(current.user.display_name, message));
     }
   });
 

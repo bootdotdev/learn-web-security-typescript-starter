@@ -52,7 +52,10 @@ export function isAcornFulfillmentTimeout(error: unknown): boolean {
   return error instanceof DOMException && error.name === "TimeoutError";
 }
 
-function waitForFulfillment(delayMs: number, signal?: AbortSignal): Promise<void> {
+function waitForFulfillment(
+  delayMs: number,
+  signal?: AbortSignal,
+): Promise<void> {
   if (signal?.aborted) {
     return Promise.reject(signal.reason);
   }

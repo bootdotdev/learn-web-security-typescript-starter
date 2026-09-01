@@ -59,7 +59,10 @@ export function findUploadedFileById(
     .get(uploadedFileId) as UploadedFile | undefined;
 }
 
-export function listUploadedFilesForUser(db: DatabaseSync, userId: number): UploadedFile[] {
+export function listUploadedFilesForUser(
+  db: DatabaseSync,
+  userId: number,
+): UploadedFile[] {
   return db
     .prepare(
       `

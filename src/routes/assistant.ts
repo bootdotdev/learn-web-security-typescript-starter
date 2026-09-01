@@ -9,7 +9,9 @@ export function createAssistantRouter(deps: Dependencies): Router {
   const router = Router();
 
   router.get("/account/assistant", (req, res) => {
-    const current = requireAuth(db, req, res, { returnTo: "/account/assistant" });
+    const current = requireAuth(db, req, res, {
+      returnTo: "/account/assistant",
+    });
     if (!current) {
       return;
     }
@@ -18,7 +20,9 @@ export function createAssistantRouter(deps: Dependencies): Router {
   });
 
   router.post("/account/assistant", (req, res) => {
-    const current = requireAuth(db, req, res, { returnTo: "/account/assistant" });
+    const current = requireAuth(db, req, res, {
+      returnTo: "/account/assistant",
+    });
     if (!current) {
       return;
     }
@@ -28,13 +32,20 @@ export function createAssistantRouter(deps: Dependencies): Router {
       res
         .status(400)
         .type("html")
-        .send(renderAssistantPage(current.user.display_name, "Ask a question about an order."));
+        .send(
+          renderAssistantPage(
+            current.user.display_name,
+            "Ask a question about an order.",
+          ),
+        );
       return;
     }
 
     const request = buildAssistantRequest(db, current.user.id, userMessage);
     const answer = runSimulatedAssistant(request);
-    res.type("html").send(renderAssistantPage(current.user.display_name, answer));
+    res
+      .type("html")
+      .send(renderAssistantPage(current.user.display_name, answer));
   });
 
   return router;

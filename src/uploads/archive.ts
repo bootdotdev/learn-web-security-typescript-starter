@@ -5,7 +5,11 @@ import { unzipSync } from "fflate";
 import type { Keyring } from "../storage/keyring.ts";
 import { detectTaxDocumentType, encryptTaxDocument } from "./taxDocuments.ts";
 
-const extractionDirectory = resolve(process.cwd(), "data", "bulk-tax-documents");
+const extractionDirectory = resolve(
+  process.cwd(),
+  "data",
+  "bulk-tax-documents",
+);
 const MAX_ARCHIVE_ENTRIES = 100;
 const MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024;
 
@@ -70,39 +74,54 @@ export function extractTaxDocumentArchive(
 
   const importDirectory = resolve(extractionDirectory, randomUUID());
   const extractedFiles: ExtractedTaxDocument[] = [];
-  const plannedEntries = Object.entries(entries).map(([entryName, contents]) => {
-    const entryDestination = resolve(importDirectory, entryName);
+  const plannedEntries = Object.entries(entries).map(
+    ([entryName, contents]) => {
+      const entryDestination = resolve(importDirectory, entryName);
 
-    if (!isInsideDirectory(importDirectory, entryDestination)) {
-      throw new ArchiveImportError("Archive contains an unsafe entry path.", 400);
-    }
+      if (!isInsideDirectory(importDirectory, entryDestination)) {
+        throw new ArchiveImportError(
+          "Archive contains an unsafe entry path.",
+          400,
+        );
+      }
 
-    if (isIgnoredArchiveEntry(entryName)) {
-      return { kind: "ignored" as const };
-    }
+      if (isIgnoredArchiveEntry(entryName)) {
+        return { kind: "ignored" as const };
+      }
 
-    if (entryName.endsWith("/")) {
-      return { entryName, destination: entryDestination, kind: "directory" as const };
-    }
+      if (entryName.endsWith("/")) {
+        return {
+          entryName,
+          destination: entryDestination,
+          kind: "directory" as const,
+        };
+      }
 
-    const detected = detectTaxDocumentType(Buffer.from(contents));
-    if (!detected) {
-      throw new ArchiveImportError("Archive contains an unsupported tax document.", 400);
-    }
+      const detected = detectTaxDocumentType(Buffer.from(contents));
+      if (!detected) {
+        throw new ArchiveImportError(
+          "Archive contains an unsupported tax document.",
+          400,
+        );
+      }
 
-    const storagePath = resolve(importDirectory, `${entryName}.enc`);
-    if (!isInsideDirectory(importDirectory, storagePath)) {
-      throw new ArchiveImportError("Archive contains an unsafe entry path.", 400);
-    }
+      const storagePath = resolve(importDirectory, `${entryName}.enc`);
+      if (!isInsideDirectory(importDirectory, storagePath)) {
+        throw new ArchiveImportError(
+          "Archive contains an unsafe entry path.",
+          400,
+        );
+      }
 
-    return {
-      kind: "file" as const,
-      entryName,
-      contents: encryptTaxDocument(Buffer.from(contents), keyring),
-      destination: storagePath,
-      contentType: detected.contentType,
-    };
-  });
+      return {
+        kind: "file" as const,
+        entryName,
+        contents: encryptTaxDocument(Buffer.from(contents), keyring),
+        destination: storagePath,
+        contentType: detected.contentType,
+      };
+    },
+  );
 
   if (!plannedEntries.some((entry) => entry.kind === "file")) {
     return { importDirectory, documents: [] };
@@ -151,7 +170,9 @@ function isIgnoredArchiveEntry(entryName: string): boolean {
   );
 }
 
-export function discardExtractedTaxDocumentArchive(archive: ExtractedTaxDocumentArchive): void {
+export function discardExtractedTaxDocumentArchive(
+  archive: ExtractedTaxDocumentArchive,
+): void {
   const relativePath = relative(extractionDirectory, archive.importDirectory);
   if (
     relativePath === "" ||
@@ -168,6 +189,9 @@ export function discardExtractedTaxDocumentArchive(archive: ExtractedTaxDocument
   rmSync(archive.importDirectory, { force: true, recursive: true });
 }
 
-function isInsideDirectory(_directory: string, _candidatePath: string): boolean {
+function isInsideDirectory(
+  _directory: string,
+  _candidatePath: string,
+): boolean {
   return true;
 }

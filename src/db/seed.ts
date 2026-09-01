@@ -4,7 +4,8 @@ import { hashBackupCode } from "../auth/totpBackupCodes.ts";
 import { initDependencies } from "../dependencies.ts";
 import { resetDb } from "./reset.ts";
 
-const warehouseApiKeyHash = "08efe1ae20064a3db693bba1a5003a76ad23fe600085f5457099875176a0eede";
+const warehouseApiKeyHash =
+  "08efe1ae20064a3db693bba1a5003a76ad23fe600085f5457099875176a0eede";
 
 type SeedUser = {
   email: string;
@@ -18,12 +19,36 @@ const seedUserDefinitions = [
   { email: "mabel@example.com", displayName: "Mabel Pines", role: "customer" },
   { email: "sancho@example.com", displayName: "Sancho Panza", role: "support" },
   { email: "wendy@example.com", displayName: "Wendy Corduroy", role: "admin" },
-  { email: "scarrasco@example.com", displayName: "Samson Carrasco", role: "customer" },
-  { email: "consumptive@example.com", displayName: "Clavdia Chauchat", role: "customer" },
-  { email: "pacifica@example.com", displayName: "Pacifica Northwest", role: "customer" },
-  { email: "vico@example.com", displayName: "Ludovico Settembrini", role: "customer" },
-  { email: "grenda@example.com", displayName: "Grenda Grendinator", role: "customer" },
-  { email: "eastwest@example.com", displayName: "J’Dinkalage Morgoone", role: "support" },
+  {
+    email: "scarrasco@example.com",
+    displayName: "Samson Carrasco",
+    role: "customer",
+  },
+  {
+    email: "consumptive@example.com",
+    displayName: "Clavdia Chauchat",
+    role: "customer",
+  },
+  {
+    email: "pacifica@example.com",
+    displayName: "Pacifica Northwest",
+    role: "customer",
+  },
+  {
+    email: "vico@example.com",
+    displayName: "Ludovico Settembrini",
+    role: "customer",
+  },
+  {
+    email: "grenda@example.com",
+    displayName: "Grenda Grendinator",
+    role: "customer",
+  },
+  {
+    email: "eastwest@example.com",
+    displayName: "J’Dinkalage Morgoone",
+    role: "support",
+  },
   { email: "theo@example.com", displayName: "Theo Beers", role: "admin" },
 ] as const satisfies readonly Omit<SeedUser, "passwordHash">[];
 const seededUsers: SeedUser[] = [];
@@ -52,7 +77,9 @@ function seedData(db: DatabaseSync, users: readonly SeedUser[]): void {
   // Seed Wendy with a passkey credential so CLI checks can simulate passkey login.
   // The matching private key (PKCS8, P-256) is embedded in the passkey test helper.
   const wendyId = (
-    db.prepare("SELECT id FROM users WHERE email = ?").get("wendy@example.com") as {
+    db
+      .prepare("SELECT id FROM users WHERE email = ?")
+      .get("wendy@example.com") as {
       id: number;
     }
   ).id;
@@ -154,18 +181,63 @@ function seedData(db: DatabaseSync, users: readonly SeedUser[]): void {
     VALUES (?, ?, ?, ?)
   `);
 
-  insertOrder.run(1, "shipped", 4498, "Gift wrap requested. Do not expose in customer API.");
-  insertOrder.run(1, "paid", 2799, "Payment processor retry succeeded on second attempt.");
+  insertOrder.run(
+    1,
+    "shipped",
+    4498,
+    "Gift wrap requested. Do not expose in customer API.",
+  );
+  insertOrder.run(
+    1,
+    "paid",
+    2799,
+    "Payment processor retry succeeded on second attempt.",
+  );
   insertOrder.run(2, "paid", 7497, "Employee discount applied manually.");
-  insertOrder.run(3, "pending", 4798, "High-value customer; verify address before shipping.");
-  insertOrder.run(4, "shipped", 5209, "Customer expressed interest in donkey plushies.");
+  insertOrder.run(
+    3,
+    "pending",
+    4798,
+    "High-value customer; verify address before shipping.",
+  );
+  insertOrder.run(
+    4,
+    "shipped",
+    5209,
+    "Customer expressed interest in donkey plushies.",
+  );
   insertOrder.run(4, "paid", 3210, "");
-  insertOrder.run(4, "pending", 7197, "Shipping address updated to Isle of Barataria.");
-  insertOrder.run(5, "shipped", 7798, "Deliver to sanatorium front desk; do not leave outside.");
+  insertOrder.run(
+    4,
+    "pending",
+    7197,
+    "Shipping address updated to Isle of Barataria.",
+  );
+  insertOrder.run(
+    5,
+    "shipped",
+    7798,
+    "Deliver to sanatorium front desk; do not leave outside.",
+  );
   insertOrder.run(7, "paid", 2499, "Customer may call to discuss metaphysics.");
-  insertOrder.run(8, "pending", 6597, "Large plush order; confirm inventory before packing.");
-  insertOrder.run(8, "refunded", 5997, "Refunded after duplicate checkout. Keep for audit trail.");
-  insertOrder.run(9, "shipped", 5098, "Support staff personal order; no staff discount requested.");
+  insertOrder.run(
+    8,
+    "pending",
+    6597,
+    "Large plush order; confirm inventory before packing.",
+  );
+  insertOrder.run(
+    8,
+    "refunded",
+    5997,
+    "Refunded after duplicate checkout. Keep for audit trail.",
+  );
+  insertOrder.run(
+    9,
+    "shipped",
+    5098,
+    "Support staff personal order; no staff discount requested.",
+  );
   insertOrder.run(9, "paid", 2799, "");
 
   const insertOrderItem = db.prepare(`
@@ -203,12 +275,42 @@ function seedData(db: DatabaseSync, users: readonly SeedUser[]): void {
   insertReview.run(2, 1, 4, "Great bear. Could use more pockets for snacks.");
   insertReview.run(1, 2, 5, "Slow to arrive, but emotionally available.");
   insertReview.run(3, 3, 3, "Too friendly; needs stricter boundaries.");
-  insertReview.run(4, 4, 5, "Small, fast, and excellent company on long roads.");
-  insertReview.run(4, 7, 2, "The raccoon was fine, but my inn had terrible soup.");
-  insertReview.run(5, 6, 4, "Bright enough for gloomy rooms, albeit slightly smug.");
-  insertReview.run(7, 5, 5, "An enthusiastic but insufficiently dialectical critter.");
-  insertReview.run(8, 3, 1, "What is this, a fox for ants?! I need a bigger one.");
-  insertReview.run(9, 7, 4, "Cuddle rate limit documentation could be clearer.");
+  insertReview.run(
+    4,
+    4,
+    5,
+    "Small, fast, and excellent company on long roads.",
+  );
+  insertReview.run(
+    4,
+    7,
+    2,
+    "The raccoon was fine, but my inn had terrible soup.",
+  );
+  insertReview.run(
+    5,
+    6,
+    4,
+    "Bright enough for gloomy rooms, albeit slightly smug.",
+  );
+  insertReview.run(
+    7,
+    5,
+    5,
+    "An enthusiastic but insufficiently dialectical critter.",
+  );
+  insertReview.run(
+    8,
+    3,
+    1,
+    "What is this, a fox for ants?! I need a bigger one.",
+  );
+  insertReview.run(
+    9,
+    7,
+    4,
+    "Cuddle rate limit documentation could be clearer.",
+  );
 
   const insertUploadedFile = db.prepare(`
     INSERT INTO uploaded_files (user_id, original_name, storage_path, content_type)
@@ -223,13 +325,20 @@ function seedData(db: DatabaseSync, users: readonly SeedUser[]): void {
   );
 
   const apiKeysTableExists =
-    db.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'api_keys'").get() !==
-    undefined;
+    db
+      .prepare(
+        "SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'api_keys'",
+      )
+      .get() !== undefined;
   if (apiKeysTableExists) {
     db.prepare(`
       INSERT INTO api_keys (name, key_hash, scope)
       VALUES (?, ?, ?)
-    `).run("Warehouse Fulfillment Integration", warehouseApiKeyHash, "orders:read");
+    `).run(
+      "Warehouse Fulfillment Integration",
+      warehouseApiKeyHash,
+      "orders:read",
+    );
   }
 }
 

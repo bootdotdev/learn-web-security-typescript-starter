@@ -6,7 +6,10 @@ export type StoredCredential = {
   created_at: string;
 };
 
-export function renderPasskeyLoginPage(error?: string, returnTo: string = "/"): string {
+export function renderPasskeyLoginPage(
+  error?: string,
+  returnTo: string = "/",
+): string {
   const errorMessage = error ? `<p class="error">${escapeHtml(error)}</p>` : "";
   return renderPage(
     "Sign In with Passkey",

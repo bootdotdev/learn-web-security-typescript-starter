@@ -46,7 +46,11 @@ body {
   min-width: 320px;
   margin: 0;
   background:
-    radial-gradient(circle at top left, var(--color-background-glow), transparent 30rem),
+    radial-gradient(
+      circle at top left,
+      var(--color-background-glow),
+      transparent 30rem
+    ),
     var(--color-background);
 }
 

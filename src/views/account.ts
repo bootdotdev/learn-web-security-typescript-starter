@@ -22,7 +22,10 @@ export function renderTotpSetupPage(
   );
 }
 
-export function renderTotpEnabledPage(displayName: string, csrfToken: string): string {
+export function renderTotpEnabledPage(
+  displayName: string,
+  csrfToken: string,
+): string {
   return renderPage(
     "Two-Step Verification Enabled",
     `<nav class="page-nav" aria-label="Primary"><a class="brand-link" href="/">Bearly Secure</a>${renderAccountLink(displayName)}</nav>
@@ -32,17 +35,26 @@ export function renderTotpEnabledPage(displayName: string, csrfToken: string): s
   );
 }
 
-export function renderTotpBackupCodesPage(displayName: string, backupCodes: string[]): string {
-  const codeList = backupCodes.map((code) => `<li><code>${escapeHtml(code)}</code></li>`).join("");
+export function renderTotpBackupCodesPage(
+  displayName: string,
+  backupCodes: string[],
+): string {
+  const codeList = backupCodes
+    .map((code) => `<li><code>${escapeHtml(code)}</code></li>`)
+    .join("");
   return renderPage(
     "Two-Step Verification Enabled",
     `<nav class="page-nav" aria-label="Primary"><a class="brand-link" href="/">Bearly Secure</a>${renderAccountLink(displayName)}</nav><p class="eyebrow">Account</p><h1>Two-Step Verification Enabled</h1><p class="subtitle">Save these backup codes somewhere safe. Each one only works once, and we won't show them again.</p><ul class="backup-codes">${codeList}</ul>`,
   );
 }
 
-export function renderAccountPage(current: CurrentSession, error: string = ""): string {
+export function renderAccountPage(
+  current: CurrentSession,
+  error: string = "",
+): string {
   const errorMessage = error ? `<p class="error">${escapeHtml(error)}</p>` : "";
-  const isSupport = current.user.role === "support" || current.user.role === "admin";
+  const isSupport =
+    current.user.role === "support" || current.user.role === "admin";
   const isAdmin = current.user.role === "admin";
   const supportNav = isSupport ? `<a href="/support">Support</a>` : "";
   const adminNav = isAdmin ? `<a href="/admin">Admin</a>` : "";
@@ -69,7 +81,10 @@ export function renderAccountPage(current: CurrentSession, error: string = ""): 
   );
 }
 
-export function renderReviewsPage(reviews: Review[], displayName: string): string {
+export function renderReviewsPage(
+  reviews: Review[],
+  displayName: string,
+): string {
   const reviewList = reviews.length
     ? reviews
         .map(

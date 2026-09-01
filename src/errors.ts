@@ -8,7 +8,8 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
 
   logEvent("unhandled_error", {
     method: req.method,
-    path: typeof req.route?.path === "string" ? req.route.path : "unmatched route",
+    path:
+      typeof req.route?.path === "string" ? req.route.path : "unmatched route",
     message: details.message,
     stack: details.stack,
   });
@@ -21,7 +22,12 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   }
 
   if (isContentTooLarge(error)) {
-    sendErrorPage(res, 413, "Content Too Large", "The submitted request exceeds the allowed size.");
+    sendErrorPage(
+      res,
+      413,
+      "Content Too Large",
+      "The submitted request exceeds the allowed size.",
+    );
     return;
   }
 

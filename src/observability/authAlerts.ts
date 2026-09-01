@@ -13,9 +13,15 @@ type Counter = {
   resetAt: number;
 };
 
-type AuthAlertRecorder = (req: Request, requestId: string, userId: number | null) => void;
+type AuthAlertRecorder = (
+  req: Request,
+  requestId: string,
+  userId: number | null,
+) => void;
 
-export function createAuthAlertThreshold(options: AuthAlertOptions): AuthAlertRecorder {
+export function createAuthAlertThreshold(
+  options: AuthAlertOptions,
+): AuthAlertRecorder {
   const counters = new Map<string, Counter>();
   const windowMs = options.windowSeconds * 1000;
   let nextSweepAt = Date.now() + windowMs;

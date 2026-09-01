@@ -2,7 +2,11 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { storeTaxDocument } from "../uploads/taxDocuments.ts";
-import { deserializeEncryptedPayload, encryptStringWithKeyring, type Keyring } from "./keyring.ts";
+import {
+  deserializeEncryptedPayload,
+  encryptStringWithKeyring,
+  type Keyring,
+} from "./keyring.ts";
 
 type TotpSecretRow = {
   id: number;
@@ -59,8 +63,14 @@ function migrateTotpSecrets(database: DatabaseSync, keyring: Keyring): void {
   try {
     for (const row of rows) {
       const totpSecret = encryptPlaintextTotpSecret(row.totp_secret, keyring);
-      const pendingTotpSecret = encryptPlaintextTotpSecret(row.pending_totp_secret, keyring);
-      if (totpSecret !== row.totp_secret || pendingTotpSecret !== row.pending_totp_secret) {
+      const pendingTotpSecret = encryptPlaintextTotpSecret(
+        row.pending_totp_secret,
+        keyring,
+      );
+      if (
+        totpSecret !== row.totp_secret ||
+        pendingTotpSecret !== row.pending_totp_secret
+      ) {
         update.run(totpSecret, pendingTotpSecret, row.id);
       }
     }
@@ -71,7 +81,10 @@ function migrateTotpSecrets(database: DatabaseSync, keyring: Keyring): void {
   }
 }
 
-function encryptPlaintextTotpSecret(value: string | null, keyring: Keyring): string | null {
+function encryptPlaintextTotpSecret(
+  value: string | null,
+  keyring: Keyring,
+): string | null {
   if (!value || isSerializedEncryptedValue(value)) {
     return value;
   }
@@ -112,9 +125,14 @@ function migrateTaxDocumentTable(
   for (const row of rows) {
     const configuredPath = resolve(row.storage_path);
     if (existsSync(configuredPath) && !isRuntimeDocumentPath(configuredPath)) {
-      throw new Error(`Unsafe plaintext tax document path: ${row.storage_path}`);
+      throw new Error(
+        `Unsafe plaintext tax document path: ${row.storage_path}`,
+      );
     }
-    if (existsSync(configuredPath) && isSerializedEncryptedPayload(configuredPath)) {
+    if (
+      existsSync(configuredPath) &&
+      isSerializedEncryptedPayload(configuredPath)
+    ) {
       continue;
     }
 
@@ -162,6 +180,10 @@ function isSerializedEncryptedPayload(storagePath: string): boolean {
 function isRuntimeDocumentPath(path: string): boolean {
   return runtimeDocumentDirectories.some((directory) => {
     const relativePath = relative(directory, path);
-    return relativePath !== "" && relativePath !== ".." && !relativePath.startsWith(`..${sep}`);
+    return (
+      relativePath !== "" &&
+      relativePath !== ".." &&
+      !relativePath.startsWith(`..${sep}`)
+    );
   });
 }

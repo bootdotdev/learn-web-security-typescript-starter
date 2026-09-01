@@ -1,4 +1,10 @@
-import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, extname, resolve } from "node:path";
 import { initDependencies } from "../src/dependencies.ts";
 
@@ -10,7 +16,9 @@ const sessionCookie = process.argv[2];
 const baseURL = process.argv[3] ?? "http://localhost:3000";
 
 if (!sessionCookie) {
-  console.error("Usage: node scripts/tax-upload.mjs <session-cookie> [base-url]");
+  console.error(
+    "Usage: node scripts/tax-upload.mjs <session-cookie> [base-url]",
+  );
   process.exit(1);
 }
 
@@ -29,7 +37,9 @@ const fixture = readFileSync(fixturePath);
 const requestOrigin = new URL(baseURL).origin;
 const deps = initDependencies();
 const db = deps.db;
-const previousMaxId = db.prepare("SELECT COALESCE(MAX(id), 0) AS id FROM uploaded_files").get().id;
+const previousMaxId = db
+  .prepare("SELECT COALESCE(MAX(id), 0) AS id FROM uploaded_files")
+  .get().id;
 const createdFilesQuery = db.prepare(`
   SELECT id, original_name, storage_path, content_type
   FROM uploaded_files
@@ -57,7 +67,11 @@ try {
     .map((entry) => resolve(uploadDirectory, entry));
 
   const validForm = new FormData();
-  validForm.append("document", new Blob([fixture], { type: "text/plain" }), fixtureName);
+  validForm.append(
+    "document",
+    new Blob([fixture], { type: "text/plain" }),
+    fixtureName,
+  );
   const validResponse = await fetch(uploadURL, {
     method: "POST",
     headers: { Cookie: sessionCookie, Origin: requestOrigin },
@@ -105,7 +119,9 @@ try {
   }
 
   const createdFiles = createdFilesQuery.all(previousMaxId);
-  const uploadedFile = createdFiles.find((file) => file.original_name === fixtureName);
+  const uploadedFile = createdFiles.find(
+    (file) => file.original_name === fixtureName,
+  );
   const formatFiles = Object.fromEntries(
     formatProbes.map((probe) => [
       probe.contentType,
@@ -119,7 +135,10 @@ try {
         probe.contentType,
         formatResponses.get(probe.originalName)?.status === 302 &&
           uploadedProbe?.content_type === probe.contentType &&
-          storedNameIsUuid(basename(uploadedProbe?.storage_path ?? ""), probe.extension) &&
+          storedNameIsUuid(
+            basename(uploadedProbe?.storage_path ?? ""),
+            probe.extension,
+          ) &&
           existsSync(uploadedProbe?.storage_path ?? ""),
       ];
     }),

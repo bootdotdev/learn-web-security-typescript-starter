@@ -16,7 +16,11 @@ export function verifyTotpCode(code: string, secret: string): boolean {
   }
 }
 
-export function consumeTotpTimeStep(db: DatabaseSync, userId: number, timeStep: number): boolean {
+export function consumeTotpTimeStep(
+  db: DatabaseSync,
+  userId: number,
+  timeStep: number,
+): boolean {
   const result = db
     .prepare(
       `UPDATE users

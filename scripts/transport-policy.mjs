@@ -1,22 +1,29 @@
 import { existsSync, readFileSync } from "node:fs";
 
-const caddyfile = existsSync("Caddyfile") ? readFileSync("Caddyfile", "utf8") : "";
+const caddyfile = existsSync("Caddyfile")
+  ? readFileSync("Caddyfile", "utf8")
+  : "";
 const uncommentedCaddyfile = caddyfile.replace(/(^|\s)#.*$/gm, "$1");
 const siteBlock =
-  uncommentedCaddyfile.match(/(?:^|\n)\s*bearly-secure\.example\s*\{([\s\S]*?)^\s*\}/m)?.[1] ?? "";
+  uncommentedCaddyfile.match(
+    /(?:^|\n)\s*bearly-secure\.example\s*\{([\s\S]*?)^\s*\}/m,
+  )?.[1] ?? "";
 
 const siteAddressConfigured = siteBlock.length > 0;
 const automaticHttpsEnabled =
   siteAddressConfigured &&
   !/\bauto_https\s+(?:off|disable_redirects)\b/i.test(uncommentedCaddyfile);
-const reverseProxyConfigured = /^\s*reverse_proxy\s+127\.0\.0\.1:3000\s*$/m.test(siteBlock);
+const reverseProxyConfigured =
+  /^\s*reverse_proxy\s+127\.0\.0\.1:3000\s*$/m.test(siteBlock);
 const hstsConfigured =
   /^\s*header\s+Strict-Transport-Security\s+"max-age=31536000; includeSubDomains"\s*$/im.test(
     siteBlock,
   );
 
 const environmentExample = readFileSync(".env.example", "utf8");
-const proxyEnvironmentDocumented = environmentExample.split(/\r?\n/).includes("TRUST_PROXY_HOPS=0");
+const proxyEnvironmentDocumented = environmentExample
+  .split(/\r?\n/)
+  .includes("TRUST_PROXY_HOPS=0");
 
 process.env.PAWPAL_API_KEY ??= "local-transport-policy-key";
 process.env.DOWNLOAD_SIGNING_KEY ??= "20".repeat(32);

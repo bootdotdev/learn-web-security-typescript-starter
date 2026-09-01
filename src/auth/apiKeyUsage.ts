@@ -58,6 +58,9 @@ export function consumeApiKeyQuota(
     used,
     remaining: Math.max(0, limit - used),
     resetsAt: reset.toISOString(),
-    retryAfterSeconds: Math.max(1, Math.ceil((reset.getTime() - now.getTime()) / 1000)),
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil((reset.getTime() - now.getTime()) / 1000),
+    ),
   };
 }

@@ -78,24 +78,29 @@ async function probeGlobalRateLimit() {
 }
 
 async function probeEndpointRateLimit() {
-  return withTemporaryApp("bearly-secure-endpoint-rate-limit-", async (origin) => {
-    const productStatuses = [];
-    let productLimit = null;
-    for (let index = 0; index < 31; index += 1) {
-      const response = await fetch(`${origin}/api/products`);
-      productLimit ??= response.headers.get("ratelimit-limit");
-      productStatuses.push(response.status);
-    }
-    const globalResponse = await fetch(`${origin}/`);
+  return withTemporaryApp(
+    "bearly-secure-endpoint-rate-limit-",
+    async (origin) => {
+      const productStatuses = [];
+      let productLimit = null;
+      for (let index = 0; index < 31; index += 1) {
+        const response = await fetch(`${origin}/api/products`);
+        productLimit ??= response.headers.get("ratelimit-limit");
+        productStatuses.push(response.status);
+      }
+      const globalResponse = await fetch(`${origin}/`);
 
-    return {
-      allowedProductRequests: productStatuses.filter((status) => status === 200).length,
-      blockedProductStatus: productStatuses.at(-1),
-      productLimit,
-      globalStatus: globalResponse.status,
-      globalLimit: globalResponse.headers.get("ratelimit-limit"),
-    };
-  });
+      return {
+        allowedProductRequests: productStatuses.filter(
+          (status) => status === 200,
+        ).length,
+        blockedProductStatus: productStatuses.at(-1),
+        productLimit,
+        globalStatus: globalResponse.status,
+        globalLimit: globalResponse.headers.get("ratelimit-limit"),
+      };
+    },
+  );
 }
 
 async function probeAuthRateLimit() {
@@ -160,7 +165,10 @@ async function probeAuthRateLimit() {
       );
       const loginByIp = await attemptSeries(
         "/login",
-        Array.from({ length: 21 }, (_, index) => `login-ip-${index}@example.com`),
+        Array.from(
+          { length: 21 },
+          (_, index) => `login-ip-${index}@example.com`,
+        ),
         () => "192.0.2.100",
         { password: "incorrect-password" },
       );
@@ -184,7 +192,10 @@ async function probeAuthRateLimit() {
       );
       const resetByIp = await attemptSeries(
         "/password-reset",
-        Array.from({ length: 11 }, (_, index) => `reset-ip-${index}@example.com`),
+        Array.from(
+          { length: 11 },
+          (_, index) => `reset-ip-${index}@example.com`,
+        ),
         () => "198.51.100.100",
       );
 
@@ -206,8 +217,10 @@ async function probeAuthRateLimit() {
         knownResetStatuses: knownReset.map(({ status }) => status),
         unknownResetStatuses: unknownReset.map(({ status }) => status),
         resetIpStatuses: resetByIp.map(({ status }) => status),
-        loginLimitBodiesMatch: knownLogin.at(-1)?.body === unknownLogin.at(-1)?.body,
-        resetLimitBodiesMatch: knownReset.at(-1)?.body === unknownReset.at(-1)?.body,
+        loginLimitBodiesMatch:
+          knownLogin.at(-1)?.body === unknownLogin.at(-1)?.body,
+        resetLimitBodiesMatch:
+          knownReset.at(-1)?.body === unknownReset.at(-1)?.body,
         resetNeutralBodiesMatch:
           knownReset[0]?.body.includes(neutralResetMessage) === true &&
           unknownReset[0]?.body.includes(neutralResetMessage) === true,
@@ -243,7 +256,9 @@ async function probeSearchThrottle() {
 }
 
 async function probeResourceLimits() {
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "bearly-secure-resource-limits-"));
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "bearly-secure-resource-limits-"),
+  );
   const previousDatabaseUrl = process.env.DATABASE_URL;
   const previousWorkingDirectory = process.cwd();
   process.env.DATABASE_URL = join(temporaryDirectory, "probe.sqlite");
@@ -290,7 +305,10 @@ async function probeResourceLimits() {
         const smallBody = await fetch(`${origin}/login`, {
           method: "POST",
           headers: requestHeaders,
-          body: JSON.stringify({ email: "nobody@example.com", password: "incorrect" }),
+          body: JSON.stringify({
+            email: "nobody@example.com",
+            password: "incorrect",
+          }),
         });
         const largeBody = await fetch(`${origin}/login`, {
           method: "POST",
@@ -304,12 +322,17 @@ async function probeResourceLimits() {
         const smallFormBody = await fetch(`${origin}/login`, {
           method: "POST",
           headers: formHeaders,
-          body: new URLSearchParams({ email: "nobody@example.com", password: "incorrect" }),
+          body: new URLSearchParams({
+            email: "nobody@example.com",
+            password: "incorrect",
+          }),
         });
         const largeFormBody = await fetch(`${origin}/login`, {
           method: "POST",
           headers: formHeaders,
-          body: new URLSearchParams({ value: "x".repeat(deps.maxRequestBodyBytes) }),
+          body: new URLSearchParams({
+            value: "x".repeat(deps.maxRequestBodyBytes),
+          }),
         });
         const validPdf = Buffer.from("%PDF-resource-limit-probe");
         const smallTaxForm = new FormData();
@@ -318,15 +341,18 @@ async function probeResourceLimits() {
           new Blob([validPdf], { type: "application/pdf" }),
           "small.pdf",
         );
-        const smallUpload = await fetch(`${origin}/account/tax-exemption/files`, {
-          method: "POST",
-          headers: {
-            Cookie: `session_id=${session.token}`,
-            Origin: "http://localhost:3000",
+        const smallUpload = await fetch(
+          `${origin}/account/tax-exemption/files`,
+          {
+            method: "POST",
+            headers: {
+              Cookie: `session_id=${session.token}`,
+              Origin: "http://localhost:3000",
+            },
+            body: smallTaxForm,
+            redirect: "manual",
           },
-          body: smallTaxForm,
-          redirect: "manual",
-        });
+        );
         const smallArchiveForm = new FormData();
         smallArchiveForm.set(
           "archive",
@@ -335,37 +361,54 @@ async function probeResourceLimits() {
           }),
           "small.zip",
         );
-        const smallArchiveUpload = await fetch(`${origin}/support/tax-exemptions/import`, {
-          method: "POST",
-          headers: {
-            Cookie: `session_id=${session.token}`,
-            Origin: "http://localhost:3000",
+        const smallArchiveUpload = await fetch(
+          `${origin}/support/tax-exemptions/import`,
+          {
+            method: "POST",
+            headers: {
+              Cookie: `session_id=${session.token}`,
+              Origin: "http://localhost:3000",
+            },
+            body: smallArchiveForm,
+            redirect: "manual",
           },
-          body: smallArchiveForm,
-          redirect: "manual",
-        });
+        );
         const taxForm = new FormData();
-        taxForm.set("document", new Blob([Buffer.alloc(deps.maxUploadBytes + 1)]), "large.pdf");
-        const largeUpload = await fetch(`${origin}/account/tax-exemption/files`, {
-          method: "POST",
-          headers: {
-            Cookie: `session_id=${session.token}`,
-            Origin: "http://localhost:3000",
+        taxForm.set(
+          "document",
+          new Blob([Buffer.alloc(deps.maxUploadBytes + 1)]),
+          "large.pdf",
+        );
+        const largeUpload = await fetch(
+          `${origin}/account/tax-exemption/files`,
+          {
+            method: "POST",
+            headers: {
+              Cookie: `session_id=${session.token}`,
+              Origin: "http://localhost:3000",
+            },
+            body: taxForm,
+            redirect: "manual",
           },
-          body: taxForm,
-          redirect: "manual",
-        });
+        );
         const archiveForm = new FormData();
-        archiveForm.set("archive", new Blob([Buffer.alloc(deps.maxUploadBytes + 1)]), "large.zip");
-        const largeArchiveUpload = await fetch(`${origin}/support/tax-exemptions/import`, {
-          method: "POST",
-          headers: {
-            Cookie: `session_id=${session.token}`,
-            Origin: "http://localhost:3000",
+        archiveForm.set(
+          "archive",
+          new Blob([Buffer.alloc(deps.maxUploadBytes + 1)]),
+          "large.zip",
+        );
+        const largeArchiveUpload = await fetch(
+          `${origin}/support/tax-exemptions/import`,
+          {
+            method: "POST",
+            headers: {
+              Cookie: `session_id=${session.token}`,
+              Origin: "http://localhost:3000",
+            },
+            body: archiveForm,
+            redirect: "manual",
           },
-          body: archiveForm,
-          redirect: "manual",
-        });
+        );
         const products = await (await fetch(`${origin}/api/products`)).json();
         const storefront = await (await fetch(`${origin}/`)).text();
         const search = await (await fetch(`${origin}/search?q=Probe`)).text();
@@ -380,7 +423,9 @@ async function probeResourceLimits() {
           largeUpload: largeUpload.status,
           largeArchiveUpload: largeArchiveUpload.status,
           uploadedDocumentCount: database
-            .prepare("SELECT COUNT(*) AS count FROM uploaded_files WHERE user_id = ?")
+            .prepare(
+              "SELECT COUNT(*) AS count FROM uploaded_files WHERE user_id = ?",
+            )
             .get(userId).count,
           importedDocumentCount: database
             .prepare(
@@ -388,7 +433,10 @@ async function probeResourceLimits() {
             )
             .get(userId).count,
           productCount: products.products.length,
-          storefrontProductCount: countOccurrences(storefront, 'class="product-card"'),
+          storefrontProductCount: countOccurrences(
+            storefront,
+            'class="product-card"',
+          ),
           searchProductCount: countOccurrences(search, 'class="product-card"'),
         };
       });
@@ -436,7 +484,9 @@ async function probeTimeouts() {
     request,
   );
 
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "bearly-secure-timeouts-"));
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "bearly-secure-timeouts-"),
+  );
   const previousDatabaseUrl = process.env.DATABASE_URL;
   const previousFulfillmentDelay = process.env.ACORN_FULFILLMENT_DELAY_MS;
   process.env.DATABASE_URL = join(temporaryDirectory, "probe.sqlite");
@@ -470,10 +520,14 @@ async function probeTimeouts() {
       )
       .run();
     database
-      .prepare("INSERT INTO cart_items (user_id, product_id, quantity) VALUES (1, 1, 1)")
+      .prepare(
+        "INSERT INTO cart_items (user_id, product_id, quantity) VALUES (1, 1, 1)",
+      )
       .run();
     const session = createSession(database, 1);
-    const orderCountBefore = database.prepare("SELECT COUNT(*) AS count FROM orders").get().count;
+    const orderCountBefore = database
+      .prepare("SELECT COUNT(*) AS count FROM orders")
+      .get().count;
 
     checkoutResult = await withServer(app, async (origin) => {
       const response = await fetch(`${origin}/checkout`, {
@@ -510,7 +564,10 @@ async function probeTimeouts() {
     rmSync(temporaryDirectory, { force: true, recursive: true });
   }
 
-  const serverSource = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
+  const serverSource = readFileSync(
+    new URL("../src/main.ts", import.meta.url),
+    "utf8",
+  );
   return {
     quickReservation: quick.reservationId,
     timeoutName,
@@ -526,7 +583,10 @@ async function probeDefaultFulfillmentTimeout(reserve, request) {
   const originalSetTimeout = globalThis.setTimeout;
   const originalClearTimeout = globalThis.clearTimeout;
   const timerHandle = {};
-  const timeoutReason = new DOMException("The operation timed out", "TimeoutError");
+  const timeoutReason = new DOMException(
+    "The operation timed out",
+    "TimeoutError",
+  );
   let defaultTimeoutMs = null;
   let abortListener;
   let fulfillmentTimerCleared = false;
@@ -585,7 +645,9 @@ async function probeDefaultFulfillmentTimeout(reserve, request) {
 }
 
 async function probeApiKeyQuota() {
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "bearly-secure-api-quota-"));
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "bearly-secure-api-quota-"),
+  );
   const previousDatabaseUrl = process.env.DATABASE_URL;
   process.env.DATABASE_URL = join(temporaryDirectory, "probe.sqlite");
   let database;
@@ -600,12 +662,20 @@ async function probeApiKeyQuota() {
       "INSERT INTO api_keys (name, key_hash, scope) VALUES (?, ?, ?)",
     );
     const contentionKeyId = Number(
-      insertApiKey.run("Contention Probe", "contention-probe-hash", "orders:read").lastInsertRowid,
+      insertApiKey.run(
+        "Contention Probe",
+        "contention-probe-hash",
+        "orders:read",
+      ).lastInsertRowid,
     );
     const validKey = "bs_quota_valid_probe";
     const wrongScopeKey = "bs_quota_wrong_scope_probe";
     insertApiKey.run("Valid Quota Probe", hashApiKey(validKey), "orders:read");
-    insertApiKey.run("Wrong Scope Probe", hashApiKey(wrongScopeKey), "products:write");
+    insertApiKey.run(
+      "Wrong Scope Probe",
+      hashApiKey(wrongScopeKey),
+      "products:write",
+    );
 
     const now = new Date("2030-01-02T12:00:00.000Z");
     const contentionResults = await consumeQuotaConcurrently(
@@ -634,7 +704,9 @@ async function probeApiKeyQuota() {
       const invalid = await requestWarehouse("invalid");
       const wrongScope = await requestWarehouse(wrongScopeKey);
       const rejectedUsageCount = database
-        .prepare("SELECT COUNT(*) AS count FROM api_key_usage WHERE api_key_id != ?")
+        .prepare(
+          "SELECT COUNT(*) AS count FROM api_key_usage WHERE api_key_id != ?",
+        )
         .get(contentionKeyId).count;
       const validResponses = [];
       for (let index = 0; index < 6; index += 1) {
@@ -660,7 +732,8 @@ async function probeApiKeyQuota() {
     return {
       atomic: {
         allowedCount: contentionResults.filter((quota) => quota.allowed).length,
-        blockedCount: contentionResults.filter((quota) => !quota.allowed).length,
+        blockedCount: contentionResults.filter((quota) => !quota.allowed)
+          .length,
         finalUsed,
         results: contentionResults,
       },
@@ -673,7 +746,13 @@ async function probeApiKeyQuota() {
   }
 }
 
-async function consumeQuotaConcurrently(databasePath, apiKeyId, limit, now, workerCount) {
+async function consumeQuotaConcurrently(
+  databasePath,
+  apiKeyId,
+  limit,
+  now,
+  workerCount,
+) {
   const barrier = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * 2);
   const workerSource = `
     import { DatabaseSync } from "node:sqlite";
@@ -716,10 +795,13 @@ async function consumeQuotaConcurrently(databasePath, apiKeyId, limit, now, work
 }
 
 function createQuotaWorker(source, workerData) {
-  const worker = new Worker(new URL(`data:text/javascript,${encodeURIComponent(source)}`), {
-    type: "module",
-    workerData,
-  });
+  const worker = new Worker(
+    new URL(`data:text/javascript,${encodeURIComponent(source)}`),
+    {
+      type: "module",
+      workerData,
+    },
+  );
   let markReady;
   let resolveResult;
   let rejectReady;
@@ -761,7 +843,10 @@ function hashApiKey(apiKey) {
 
 async function probeLoadShedding() {
   const { createLoadShedder } = await import("../src/security/loadShedding.ts");
-  const appSource = readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
+  const appSource = readFileSync(
+    new URL("../src/app.ts", import.meta.url),
+    "utf8",
+  );
   const healthRoutePosition = appSource.indexOf('app.get("/health"');
   const loadShedderPosition = appSource.indexOf("app.use(loadShedder)");
   const app = express();
@@ -857,7 +942,11 @@ async function withServer(app, probe) {
   }
 }
 
-async function withTemporaryApp(prefix, probe, configureDependencies = () => {}) {
+async function withTemporaryApp(
+  prefix,
+  probe,
+  configureDependencies = () => {},
+) {
   const temporaryDirectory = mkdtempSync(join(tmpdir(), prefix));
   const previousDatabaseUrl = process.env.DATABASE_URL;
   process.env.DATABASE_URL = join(temporaryDirectory, "probe.sqlite");
@@ -904,7 +993,9 @@ function countOccurrences(value, needle) {
 }
 
 function readNumericAssignment(source, propertyName) {
-  const match = source.match(new RegExp(`server\\.${propertyName}\\s*=\\s*([\\d_]+)\\s*;`));
+  const match = source.match(
+    new RegExp(`server\\.${propertyName}\\s*=\\s*([\\d_]+)\\s*;`),
+  );
   if (!match) {
     return null;
   }

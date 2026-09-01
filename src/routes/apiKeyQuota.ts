@@ -15,13 +15,19 @@ export function toApiKeyQuotaResponse(quota: ApiKeyQuota): {
   };
 }
 
-export function setApiKeyQuotaHeaders(response: Response, quota: ApiKeyQuota): void {
+export function setApiKeyQuotaHeaders(
+  response: Response,
+  quota: ApiKeyQuota,
+): void {
   response.setHeader("X-Quota-Limit", String(quota.limit));
   response.setHeader("X-Quota-Remaining", String(quota.remaining));
   response.setHeader("X-Quota-Reset", quota.resetsAt);
 }
 
-export function sendApiKeyQuotaExhausted(response: Response, quota: ApiKeyQuota): void {
+export function sendApiKeyQuotaExhausted(
+  response: Response,
+  quota: ApiKeyQuota,
+): void {
   setApiKeyQuotaHeaders(response, quota);
   response.setHeader("Retry-After", String(quota.retryAfterSeconds));
   response.status(429).json({

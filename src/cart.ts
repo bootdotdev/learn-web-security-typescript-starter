@@ -119,7 +119,11 @@ export function updateCartItemQuantity(
   return result.changes === 1;
 }
 
-function removeCartItem(db: DatabaseSync, userId: number, productId: number): void {
+function removeCartItem(
+  db: DatabaseSync,
+  userId: number,
+  productId: number,
+): void {
   db.prepare(
     `
         DELETE FROM cart_items
@@ -146,5 +150,9 @@ export function getCartItemAvailability(item: CartItem): CartItemAvailability {
 }
 
 function isValidCartQuantity(quantity: number, minimum: 0 | 1): boolean {
-  return Number.isSafeInteger(quantity) && quantity >= minimum && quantity <= MAX_CART_QUANTITY;
+  return (
+    Number.isSafeInteger(quantity) &&
+    quantity >= minimum &&
+    quantity <= MAX_CART_QUANTITY
+  );
 }

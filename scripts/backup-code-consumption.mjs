@@ -1,9 +1,13 @@
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { hashBackupCode, verifyAndConsumeBackupCode } from "../src/auth/totpBackupCodes.ts";
+import {
+  hashBackupCode,
+  verifyAndConsumeBackupCode,
+} from "../src/auth/totpBackupCodes.ts";
 
 const databasePath =
-  process.env.DATABASE_URL ?? join(process.cwd(), "data", "bearly-secure.sqlite");
+  process.env.DATABASE_URL ??
+  join(process.cwd(), "data", "bearly-secure.sqlite");
 const fixtureCode = "bs_test_atomic_backup_code";
 const fixtureCodeHash = hashBackupCode(fixtureCode);
 const database = new DatabaseSync(databasePath);
@@ -23,7 +27,11 @@ const instrumentedDatabase = {
   },
 };
 
-const instrumentedAccepted = verifyAndConsumeBackupCode(instrumentedDatabase, 1, fixtureCode);
+const instrumentedAccepted = verifyAndConsumeBackupCode(
+  instrumentedDatabase,
+  1,
+  fixtureCode,
+);
 const [preparedStatement] = preparedStatements;
 const singleConditionalUpdate =
   instrumentedAccepted === true &&
@@ -35,7 +43,9 @@ const singleConditionalUpdate =
   /\bused_at\s+IS\s+NULL\b/i.test(preparedStatement ?? "");
 
 try {
-  const user = database.prepare("SELECT id FROM users WHERE email = ?").get("wendy@example.com");
+  const user = database
+    .prepare("SELECT id FROM users WHERE email = ?")
+    .get("wendy@example.com");
   if (!user) {
     throw new Error("Wendy's seeded account was not found");
   }
@@ -52,8 +62,16 @@ try {
     )
     .run(user.id, fixtureCodeHash);
 
-  const firstAccepted = verifyAndConsumeBackupCode(database, user.id, fixtureCode);
-  const secondAccepted = verifyAndConsumeBackupCode(database, user.id, fixtureCode);
+  const firstAccepted = verifyAndConsumeBackupCode(
+    database,
+    user.id,
+    fixtureCode,
+  );
+  const secondAccepted = verifyAndConsumeBackupCode(
+    database,
+    user.id,
+    fixtureCode,
+  );
   const stored = database
     .prepare("SELECT used_at FROM totp_backup_codes WHERE code_hash = ?")
     .get(fixtureCodeHash);

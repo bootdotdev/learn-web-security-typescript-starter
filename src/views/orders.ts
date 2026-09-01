@@ -1,5 +1,10 @@
 import type { Order, OrderItem } from "../orders/index.ts";
-import { escapeHtml, formatMoney, renderAccountLink, renderPage } from "./layout.ts";
+import {
+  escapeHtml,
+  formatMoney,
+  renderAccountLink,
+  renderPage,
+} from "./layout.ts";
 
 export function renderOrdersPage(displayName: string, orders: Order[]): string {
   const orderRows = orders

@@ -29,7 +29,12 @@ export function createCartRouter(deps: Dependencies): Router {
     res
       .type("html")
       .send(
-        renderCartPage(current.user.display_name, items, totalCents, current.session.csrf_token),
+        renderCartPage(
+          current.user.display_name,
+          items,
+          totalCents,
+          current.session.csrf_token,
+        ),
       );
   });
 
@@ -40,7 +45,12 @@ export function createCartRouter(deps: Dependencies): Router {
     }
 
     if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
-      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
+      sendErrorPage(
+        res,
+        403,
+        "Forbidden",
+        "Your request could not be verified.",
+      );
       return;
     }
 
@@ -48,7 +58,12 @@ export function createCartRouter(deps: Dependencies): Router {
     const quantity = parseCartQuantity(req.body.quantity, 1);
 
     if (!Number.isSafeInteger(productId) || !findProductById(db, productId)) {
-      sendErrorPage(res, 404, "Product Not Found", "We couldn't find that product.");
+      sendErrorPage(
+        res,
+        404,
+        "Product Not Found",
+        "We couldn't find that product.",
+      );
       return;
     }
 
@@ -58,7 +73,12 @@ export function createCartRouter(deps: Dependencies): Router {
     }
 
     if (!addProductToCart(db, current.user.id, productId, quantity)) {
-      sendErrorPage(res, 400, "Unable to Update Cart", "That quantity is no longer available.");
+      sendErrorPage(
+        res,
+        400,
+        "Unable to Update Cart",
+        "That quantity is no longer available.",
+      );
       return;
     }
 
@@ -72,7 +92,12 @@ export function createCartRouter(deps: Dependencies): Router {
     }
 
     if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
-      sendErrorPage(res, 403, "Forbidden", "Your request could not be verified.");
+      sendErrorPage(
+        res,
+        403,
+        "Forbidden",
+        "Your request could not be verified.",
+      );
       return;
     }
 
@@ -80,7 +105,12 @@ export function createCartRouter(deps: Dependencies): Router {
     const quantity = parseCartQuantity(req.body.quantity, 0);
 
     if (!Number.isSafeInteger(productId)) {
-      sendErrorPage(res, 404, "Product Not Found", "We couldn't find that product.");
+      sendErrorPage(
+        res,
+        404,
+        "Product Not Found",
+        "We couldn't find that product.",
+      );
       return;
     }
 
@@ -90,7 +120,12 @@ export function createCartRouter(deps: Dependencies): Router {
     }
 
     if (!updateCartItemQuantity(db, current.user.id, productId, quantity)) {
-      sendErrorPage(res, 400, "Unable to Update Cart", "That quantity is no longer available.");
+      sendErrorPage(
+        res,
+        400,
+        "Unable to Update Cart",
+        "That quantity is no longer available.",
+      );
       return;
     }
     res.redirect("/cart");
@@ -101,7 +136,9 @@ export function createCartRouter(deps: Dependencies): Router {
 
 function parseCartQuantity(value: unknown, minimum: 0 | 1): number | undefined {
   const quantity = Number(value);
-  return Number.isSafeInteger(quantity) && quantity >= minimum && quantity <= MAX_CART_QUANTITY
+  return Number.isSafeInteger(quantity) &&
+    quantity >= minimum &&
+    quantity <= MAX_CART_QUANTITY
     ? quantity
     : undefined;
 }

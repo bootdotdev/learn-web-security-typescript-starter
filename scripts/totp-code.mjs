@@ -25,7 +25,10 @@ const counter = Math.floor(Date.now() / 30000);
 const counterBuffer = Buffer.alloc(8);
 counterBuffer.writeBigUInt64BE(BigInt(counter));
 
-const hmac = crypto.createHmac("sha1", Buffer.from(bytes)).update(counterBuffer).digest();
+const hmac = crypto
+  .createHmac("sha1", Buffer.from(bytes))
+  .update(counterBuffer)
+  .digest();
 const offset = hmac[hmac.length - 1] & 0xf;
 const binary =
   ((hmac[offset] & 0x7f) << 24) |

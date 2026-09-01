@@ -5,13 +5,18 @@ const LEGACY_SHA256_PATTERN = /^[a-f0-9]{64}$/i;
 
 export function hashPassword(password: string): string {
   if (password.length > MAX_PASSWORD_LENGTH) {
-    throw new RangeError(`Password must not exceed ${MAX_PASSWORD_LENGTH} characters`);
+    throw new RangeError(
+      `Password must not exceed ${MAX_PASSWORD_LENGTH} characters`,
+    );
   }
 
   return createHash("sha256").update(password).digest("hex");
 }
 
-export function verifyPassword(password: string, passwordHash: string): boolean {
+export function verifyPassword(
+  password: string,
+  passwordHash: string,
+): boolean {
   if (password.length > MAX_PASSWORD_LENGTH) {
     return false;
   }

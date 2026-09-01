@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 
 const checkoutSha = "de0fac2e4500dabe0009e67214ff5f5447ce83dd";
 const setupNodeSha = "48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e";
-const workflowPath = process.argv[2] ?? ".github/workflows/dependency-audit.yml";
+const workflowPath =
+  process.argv[2] ?? ".github/workflows/dependency-audit.yml";
 
 function splitComment(line) {
   let quote;
@@ -24,8 +25,14 @@ function splitComment(line) {
 
     if (character === "'" || character === '"') {
       quote = character;
-    } else if (character === "#" && (index === 0 || /\s/.test(line[index - 1]))) {
-      return { source: line.slice(0, index).trimEnd(), comment: line.slice(index + 1).trim() };
+    } else if (
+      character === "#" &&
+      (index === 0 || /\s/.test(line[index - 1]))
+    ) {
+      return {
+        source: line.slice(0, index).trimEnd(),
+        comment: line.slice(index + 1).trim(),
+      };
     }
   }
 
@@ -37,12 +44,14 @@ function tokenize(text) {
   const tokens = [];
 
   for (const [index, rawLine] of text.split(/\r?\n/u).entries()) {
-    if (rawLine.includes("\t")) throw new Error(`Tabs are not allowed on line ${index + 1}`);
+    if (rawLine.includes("\t"))
+      throw new Error(`Tabs are not allowed on line ${index + 1}`);
     const { source, comment } = splitComment(rawLine);
     if (!source.trim()) continue;
 
     const indent = source.length - source.trimStart().length;
-    if (indent % 2 !== 0) throw new Error(`Unexpected indentation on line ${index + 1}`);
+    if (indent % 2 !== 0)
+      throw new Error(`Unexpected indentation on line ${index + 1}`);
     tokens.push({ content: source.trim(), indent, comment, line: index + 1 });
   }
 
@@ -84,11 +93,13 @@ function parseScalar(value) {
     }
   }
   if (value.startsWith("'")) {
-    if (!value.endsWith("'")) throw new Error(`Invalid single-quoted scalar: ${value}`);
+    if (!value.endsWith("'"))
+      throw new Error(`Invalid single-quoted scalar: ${value}`);
     return value.slice(1, -1).replaceAll("''", "'");
   }
   if (value.startsWith("[")) {
-    if (!value.endsWith("]")) throw new Error(`Invalid flow sequence: ${value}`);
+    if (!value.endsWith("]"))
+      throw new Error(`Invalid flow sequence: ${value}`);
     const contents = value.slice(1, -1).trim();
     return contents ? splitFlowItems(contents).map(parseScalar) : [];
   }
@@ -104,16 +115,19 @@ function parseScalar(value) {
 
 function parsePair(content, line) {
   const separator = content.indexOf(":");
-  if (separator < 1) throw new Error(`Expected a mapping entry on line ${line}`);
+  if (separator < 1)
+    throw new Error(`Expected a mapping entry on line ${line}`);
 
   const rawKey = content.slice(0, separator).trim();
   const key = parseScalar(rawKey);
-  if (typeof key !== "string" || !key) throw new Error(`Invalid mapping key on line ${line}`);
+  if (typeof key !== "string" || !key)
+    throw new Error(`Invalid mapping key on line ${line}`);
   return { key, rawValue: content.slice(separator + 1).trim() };
 }
 
 function addPair(target, key, value, line) {
-  if (Object.hasOwn(target, key)) throw new Error(`Duplicate key '${key}' on line ${line}`);
+  if (Object.hasOwn(target, key))
+    throw new Error(`Duplicate key '${key}' on line ${line}`);
   target[key] = value;
 }
 
@@ -208,7 +222,8 @@ function parseBlock(tokens, index, indent) {
 
 function parseYaml(text) {
   const tokens = tokenize(text);
-  if (tokens.length === 0 || tokens[0].indent !== 0) throw new Error("Missing top-level mapping");
+  if (tokens.length === 0 || tokens[0].indent !== 0)
+    throw new Error("Missing top-level mapping");
   const parsed = parseBlock(tokens, 0, 0);
   if (parsed.index !== tokens.length || Array.isArray(parsed.value)) {
     throw new Error("Workflow must contain one top-level mapping");
@@ -222,7 +237,8 @@ function isObject(value) {
 
 function triggerNames(value) {
   if (typeof value === "string") return [value];
-  if (Array.isArray(value)) return value.filter((item) => typeof item === "string");
+  if (Array.isArray(value))
+    return value.filter((item) => typeof item === "string");
   return isObject(value) ? Object.keys(value) : [];
 }
 
@@ -253,13 +269,20 @@ function evaluatePolicy(workflow, text) {
     jobs.every((job) => isObject(job) && !Object.hasOwn(job, "permissions"));
 
   const auditJob = jobs.find(
-    (job) => isObject(job) && job["runs-on"] === "ubuntu-latest" && Array.isArray(job.steps),
+    (job) =>
+      isObject(job) &&
+      job["runs-on"] === "ubuntu-latest" &&
+      Array.isArray(job.steps),
   );
   const steps = auditJob?.steps ?? [];
   const checkoutRef = `actions/checkout@${checkoutSha}`;
   const setupNodeRef = `actions/setup-node@${setupNodeSha}`;
-  const checkoutIndex = steps.findIndex((step) => isObject(step) && step.uses === checkoutRef);
-  const setupNodeIndex = steps.findIndex((step) => isObject(step) && step.uses === setupNodeRef);
+  const checkoutIndex = steps.findIndex(
+    (step) => isObject(step) && step.uses === checkoutRef,
+  );
+  const setupNodeIndex = steps.findIndex(
+    (step) => isObject(step) && step.uses === setupNodeRef,
+  );
   const installIndex = steps.findIndex(
     (step) => isObject(step) && step.run === "npm ci --ignore-scripts",
   );
@@ -274,7 +297,12 @@ function evaluatePolicy(workflow, text) {
       step.uses.startsWith("./") ||
       /^[^@\s]+@[0-9a-f]{40}$/u.test(step.uses),
   );
-  const requiredStepsRun = [checkoutIndex, setupNodeIndex, installIndex, auditIndex].every(
+  const requiredStepsRun = [
+    checkoutIndex,
+    setupNodeIndex,
+    installIndex,
+    auditIndex,
+  ].every(
     (stepIndex) =>
       stepIndex >= 0 &&
       !Object.hasOwn(steps[stepIndex], "if") &&

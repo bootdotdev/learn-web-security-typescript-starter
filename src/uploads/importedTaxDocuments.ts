@@ -1,5 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
-import { discardExtractedTaxDocumentArchive, type ExtractedTaxDocumentArchive } from "./archive.ts";
+import {
+  discardExtractedTaxDocumentArchive,
+  type ExtractedTaxDocumentArchive,
+} from "./archive.ts";
 
 export type ImportedTaxDocument = {
   id: number;
@@ -39,7 +42,10 @@ export function createImportedTaxDocuments(
         document.storagePath,
         document.contentType,
       );
-      const importedDocument = findImportedTaxDocumentById(db, Number(result.lastInsertRowid));
+      const importedDocument = findImportedTaxDocumentById(
+        db,
+        Number(result.lastInsertRowid),
+      );
       if (!importedDocument) {
         throw new Error("Failed to create imported tax document");
       }
@@ -95,7 +101,9 @@ export function findImportedTaxDocumentById(
     .get(importedDocumentId) as ImportedTaxDocument | undefined;
 }
 
-export function listImportedTaxDocuments(db: DatabaseSync): ImportedTaxDocument[] {
+export function listImportedTaxDocuments(
+  db: DatabaseSync,
+): ImportedTaxDocument[] {
   return db
     .prepare(
       `

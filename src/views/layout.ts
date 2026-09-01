@@ -1,5 +1,6 @@
 export function renderPage(title: string, body: string): string {
-  const documentTitle = title === "Bearly Secure" ? title : `${title} - Bearly Secure`;
+  const documentTitle =
+    title === "Bearly Secure" ? title : `${title} - Bearly Secure`;
 
   return `<!doctype html>
 <html lang="en">

@@ -27,7 +27,10 @@ type PasskeyCredential = {
   created_at: string;
 };
 
-export function listPasskeyCredentials(db: DatabaseSync, userId: number): PasskeyCredential[] {
+export function listPasskeyCredentials(
+  db: DatabaseSync,
+  userId: number,
+): PasskeyCredential[] {
   return db
     .prepare(
       `SELECT id, user_id, credential_id, public_key, counter, transports, created_at
@@ -73,14 +76,19 @@ export function updatePasskeyCounter(
   credentialId: string,
   newCounter: number,
 ): void {
-  db.prepare(`UPDATE passkey_credentials SET counter = ? WHERE credential_id = ?`).run(
-    newCounter,
-    credentialId,
-  );
+  db.prepare(
+    `UPDATE passkey_credentials SET counter = ? WHERE credential_id = ?`,
+  ).run(newCounter, credentialId);
 }
 
-export function deletePasskeyCredential(db: DatabaseSync, id: number, userId: number): void {
-  db.prepare(`DELETE FROM passkey_credentials WHERE id = ? AND user_id = ?`).run(id, userId);
+export function deletePasskeyCredential(
+  db: DatabaseSync,
+  id: number,
+  userId: number,
+): void {
+  db.prepare(
+    `DELETE FROM passkey_credentials WHERE id = ? AND user_id = ?`,
+  ).run(id, userId);
 }
 
 type StoredChallenge = {
@@ -90,12 +98,17 @@ type StoredChallenge = {
   expires_at: string;
 };
 
-export function createChallenge(db: DatabaseSync, userId?: number): StoredChallenge {
+export function createChallenge(
+  db: DatabaseSync,
+  userId?: number,
+): StoredChallenge {
   const id = crypto.randomUUID();
   const challenge = isoBase64URL.fromBuffer(crypto.randomBytes(32));
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-  db.prepare("DELETE FROM passkey_challenges WHERE expires_at <= ?").run(new Date().toISOString());
+  db.prepare("DELETE FROM passkey_challenges WHERE expires_at <= ?").run(
+    new Date().toISOString(),
+  );
   db.prepare(
     `INSERT INTO passkey_challenges (id, challenge, user_id, expires_at)
        VALUES (?, ?, ?, ?)`,
@@ -104,7 +117,10 @@ export function createChallenge(db: DatabaseSync, userId?: number): StoredChalle
   return { id, challenge, user_id: userId ?? null, expires_at: expiresAt };
 }
 
-export function consumeChallenge(db: DatabaseSync, id: string): StoredChallenge | undefined {
+export function consumeChallenge(
+  db: DatabaseSync,
+  id: string,
+): StoredChallenge | undefined {
   const stored = db
     .prepare(
       `DELETE FROM passkey_challenges

@@ -17,7 +17,10 @@ export function renderPasswordResetCompletePage(email: string): string {
   );
 }
 
-export function renderLoginPage(error?: string, returnTo: string = "/"): string {
+export function renderLoginPage(
+  error?: string,
+  returnTo: string = "/",
+): string {
   return renderPage(
     "Log In",
     `<nav class="page-nav" aria-label="Primary"><a class="brand-link" href="/">Bearly Secure</a></nav>
@@ -86,7 +89,10 @@ export function renderSignupPage(error?: string): string {
   );
 }
 
-export function renderPasswordResetRequestPage(message?: string, resetLink?: string): string {
+export function renderPasswordResetRequestPage(
+  message?: string,
+  resetLink?: string,
+): string {
   const messageMarkup = message ? `<p>${escapeHtml(message)}</p>` : "";
   const resetLinkMarkup = resetLink
     ? `<article class="card"><h2>Reset Link</h2><p>Bear Mail is offline, so here’s the reset link:</p><p><a href="${escapeHtml(resetLink)}">${escapeHtml(resetLink)}</a></p></article>`
@@ -106,7 +112,9 @@ export function renderPasswordResetRequestPage(message?: string, resetLink?: str
   );
 }
 
-export function renderPasswordResetRequestConfirmationPage(resetLink?: string): string {
+export function renderPasswordResetRequestConfirmationPage(
+  resetLink?: string,
+): string {
   return renderPasswordResetRequestPage(
     "An account exists for that email, Bear Mail will send a reset link shortly.",
     resetLink,

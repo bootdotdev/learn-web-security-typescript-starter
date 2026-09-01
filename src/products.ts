@@ -61,7 +61,10 @@ export function listProducts(db: DatabaseSync): Product[] {
     .all() as Product[];
 }
 
-export function listPublicProducts(db: DatabaseSync, maxResults: number): Product[] {
+export function listPublicProducts(
+  db: DatabaseSync,
+  maxResults: number,
+): Product[] {
   return db
     .prepare(
       `
@@ -87,7 +90,10 @@ export function listAllProducts(db: DatabaseSync): Product[] {
     .all() as Product[];
 }
 
-export function findAnyProductById(db: DatabaseSync, productId: number): Product | undefined {
+export function findAnyProductById(
+  db: DatabaseSync,
+  productId: number,
+): Product | undefined {
   return db
     .prepare(
       `
@@ -99,7 +105,10 @@ export function findAnyProductById(db: DatabaseSync, productId: number): Product
     .get(productId) as Product | undefined;
 }
 
-export function findProductById(db: DatabaseSync, productId: number): Product | undefined {
+export function findProductById(
+  db: DatabaseSync,
+  productId: number,
+): Product | undefined {
   return db
     .prepare(
       `

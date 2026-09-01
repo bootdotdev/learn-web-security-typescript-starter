@@ -28,7 +28,10 @@ function hashChallengeToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function getCookie(cookieHeader: string | undefined, name: string): string | undefined {
+function getCookie(
+  cookieHeader: string | undefined,
+  name: string,
+): string | undefined {
   if (!cookieHeader) {
     return undefined;
   }
@@ -49,7 +52,9 @@ function getCookie(cookieHeader: string | undefined, name: string): string | und
   }
 }
 
-export function getTotpLoginChallengeToken(cookieHeader: string | undefined): string | undefined {
+export function getTotpLoginChallengeToken(
+  cookieHeader: string | undefined,
+): string | undefined {
   return getCookie(cookieHeader, TOTP_LOGIN_CHALLENGE_COOKIE_NAME);
 }
 
@@ -61,7 +66,9 @@ export function createTotpLoginChallenge(
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashChallengeToken(token);
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + TOTP_LOGIN_CHALLENGE_TTL_MS).toISOString();
+  const expiresAt = new Date(
+    now.getTime() + TOTP_LOGIN_CHALLENGE_TTL_MS,
+  ).toISOString();
 
   db.prepare(
     `
@@ -111,7 +118,10 @@ export function findTotpLoginChallenge(
   if (!challenge) {
     return undefined;
   }
-  if (challenge.attempts_remaining <= 0 || new Date(challenge.expires_at) <= new Date()) {
+  if (
+    challenge.attempts_remaining <= 0 ||
+    new Date(challenge.expires_at) <= new Date()
+  ) {
     deleteTotpLoginChallenge(db, token);
     return undefined;
   }
@@ -119,7 +129,10 @@ export function findTotpLoginChallenge(
   return challenge;
 }
 
-export function recordTotpLoginChallengeFailure(db: DatabaseSync, token: string): boolean {
+export function recordTotpLoginChallengeFailure(
+  db: DatabaseSync,
+  token: string,
+): boolean {
   const now = new Date().toISOString();
   const failedChallenge = db
     .prepare(
@@ -132,7 +145,9 @@ export function recordTotpLoginChallengeFailure(db: DatabaseSync, token: string)
         RETURNING attempts_remaining
       `,
     )
-    .get(hashChallengeToken(token), now) as { attempts_remaining: number } | undefined;
+    .get(hashChallengeToken(token), now) as
+    | { attempts_remaining: number }
+    | undefined;
 
   if (!failedChallenge || failedChallenge.attempts_remaining <= 0) {
     deleteTotpLoginChallenge(db, token);
@@ -142,7 +157,10 @@ export function recordTotpLoginChallengeFailure(db: DatabaseSync, token: string)
   return false;
 }
 
-export function deleteTotpLoginChallenge(db: DatabaseSync, token: string): void {
+export function deleteTotpLoginChallenge(
+  db: DatabaseSync,
+  token: string,
+): void {
   db.prepare("DELETE FROM totp_login_challenges WHERE token_hash = ?").run(
     hashChallengeToken(token),
   );
@@ -169,5 +187,8 @@ export function setTotpLoginChallengeCookie(
 }
 
 export function clearTotpLoginChallengeCookie(response: Response): void {
-  response.clearCookie(TOTP_LOGIN_CHALLENGE_COOKIE_NAME, totpLoginChallengeCookieOptions);
+  response.clearCookie(
+    TOTP_LOGIN_CHALLENGE_COOKIE_NAME,
+    totpLoginChallengeCookieOptions,
+  );
 }

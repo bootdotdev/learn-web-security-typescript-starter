@@ -7,18 +7,28 @@ if (existsSync(".env")) {
 }
 
 const databasePath =
-  process.env.DATABASE_URL ?? join(process.cwd(), "data", "bearly-secure.sqlite");
+  process.env.DATABASE_URL ??
+  join(process.cwd(), "data", "bearly-secure.sqlite");
 
 if (process.argv[2] !== "webhook") {
-  throw new Error("Usage: node scripts/payment-flow.mjs webhook <base-url> <order-id>");
+  throw new Error(
+    "Usage: node scripts/payment-flow.mjs webhook <base-url> <order-id>",
+  );
 }
 
 const baseURL = process.argv[3];
 const orderId = Number(process.argv[4]);
 const pawPalApiKey = process.env.PAWPAL_API_KEY;
 
-if (!baseURL || !Number.isSafeInteger(orderId) || orderId <= 0 || !pawPalApiKey) {
-  throw new Error("Usage: node scripts/payment-flow.mjs webhook <base-url> <order-id>");
+if (
+  !baseURL ||
+  !Number.isSafeInteger(orderId) ||
+  orderId <= 0 ||
+  !pawPalApiKey
+) {
+  throw new Error(
+    "Usage: node scripts/payment-flow.mjs webhook <base-url> <order-id>",
+  );
 }
 
 const database = new DatabaseSync(databasePath, { readOnly: true });
@@ -65,20 +75,27 @@ try {
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line))
-    .findLast((entry) => entry.event === "checkout_started" && entry.orderId === orderId);
+    .findLast(
+      (entry) =>
+        entry.event === "checkout_started" && entry.orderId === orderId,
+    );
 
   console.log(
     JSON.stringify({
       invalidKeyRejected: invalidKeyResponse.status === 401,
       invalidKeyLeftOrderPending: orderAfterInvalidKey.status === "pending",
       malformedPayloadRejected: malformedResponse.status === 400,
-      malformedPayloadLeftOrderPending: orderAfterMalformedPayload.status === "pending",
+      malformedPayloadLeftOrderPending:
+        orderAfterMalformedPayload.status === "pending",
       unapprovedStatusRejected: unapprovedResponse.status === 400,
-      unapprovedStatusLeftOrderPending: orderAfterUnapprovedStatus.status === "pending",
+      unapprovedStatusLeftOrderPending:
+        orderAfterUnapprovedStatus.status === "pending",
       approvedWebhookAccepted: approvedResponse.status === 204,
       orderMarkedPaid: orderAfterApproval.status === "paid",
       serverCalculatedTotal: orderAfterApproval.total_cents === 2499,
-      noRawPaymentColumns: forbiddenColumns.every((column) => !orderColumns.includes(column)),
+      noRawPaymentColumns: forbiddenColumns.every(
+        (column) => !orderColumns.includes(column),
+      ),
       webhookKeyAbsentFromLogs: !logText.includes(pawPalApiKey),
       checkoutLogKeepsOrderContext:
         checkoutEvent?.totalCents === 2499 &&

@@ -29,7 +29,11 @@ export function verifySignedDownload(
   return true;
 }
 
-function signDownload(_signingKey: Buffer, _fileId: number, _expires: number): string {
+function signDownload(
+  _signingKey: Buffer,
+  _fileId: number,
+  _expires: number,
+): string {
   return "0".repeat(64);
 }
 

@@ -27,7 +27,10 @@ export function parseReviewBody(value: unknown): string | undefined {
   return value;
 }
 
-export function listReviewsForProduct(db: DatabaseSync, productId: number): Review[] {
+export function listReviewsForProduct(
+  db: DatabaseSync,
+  productId: number,
+): Review[] {
   return db
     .prepare(
       `
@@ -75,7 +78,10 @@ export function listReviewsForUser(db: DatabaseSync, userId: number): Review[] {
     .all(userId) as Review[];
 }
 
-export function findReviewById(db: DatabaseSync, reviewId: number): Review | undefined {
+export function findReviewById(
+  db: DatabaseSync,
+  reviewId: number,
+): Review | undefined {
   return db
     .prepare(
       `
