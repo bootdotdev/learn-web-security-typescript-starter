@@ -1,5 +1,11 @@
 import { once } from "node:events";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { generateSync } from "otplib";
@@ -82,19 +88,34 @@ async function probeObservability() {
           undefined,
           { redirect: "manual" },
         );
-        const challengeCookie = readResponseCookie(totpPassword, "totp_login_challenge");
+        const challengeCookie = readResponseCookie(
+          totpPassword,
+          "totp_login_challenge",
+        );
         const failedTotp = challengeCookie
-          ? await postForm(origin, "/login/totp", { mfaCode: invalidMfaCode }, undefined, {
-              cookie: challengeCookie,
-              redirect: "manual",
-            })
+          ? await postForm(
+              origin,
+              "/login/totp",
+              { mfaCode: invalidMfaCode },
+              undefined,
+              {
+                cookie: challengeCookie,
+                redirect: "manual",
+              },
+            )
           : undefined;
         submittedMfaCode = generateSync({ secret: wendyTotpSecret });
         const successfulTotp = challengeCookie
-          ? await postForm(origin, "/login/totp", { mfaCode: submittedMfaCode }, undefined, {
-              cookie: challengeCookie,
-              redirect: "manual",
-            })
+          ? await postForm(
+              origin,
+              "/login/totp",
+              { mfaCode: submittedMfaCode },
+              undefined,
+              {
+                cookie: challengeCookie,
+                redirect: "manual",
+              },
+            )
           : undefined;
 
         const originalConsoleLog = console.log;
@@ -130,21 +151,39 @@ async function probeObservability() {
       deps.db.close();
     }
 
-    const appendedLog = readFileSync(logPath).subarray(originalLog.length).toString("utf8");
+    const appendedLog = readFileSync(logPath)
+      .subarray(originalLog.length)
+      .toString("utf8");
     const entries = appendedLog
       .trim()
       .split("\n")
       .filter(Boolean)
       .map((line) => JSON.parse(line));
-    const failedLoginEntry = findEvent(entries, "login_attempt", result.loginRequestId);
+    const failedLoginEntry = findEvent(
+      entries,
+      "login_attempt",
+      result.loginRequestId,
+    );
     const successfulLoginEntry = findEvent(
       entries,
       "login_attempt",
       result.successfulLoginRequestId,
     );
-    const failedTotpEntry = findEvent(entries, "login_attempt", result.failedTotpRequestId);
-    const successfulTotpEntry = findEvent(entries, "login_attempt", result.successfulTotpRequestId);
-    const resetEntry = findEvent(entries, "password_reset_request", result.resetRequestId);
+    const failedTotpEntry = findEvent(
+      entries,
+      "login_attempt",
+      result.failedTotpRequestId,
+    );
+    const successfulTotpEntry = findEvent(
+      entries,
+      "login_attempt",
+      result.successfulTotpRequestId,
+    );
+    const resetEntry = findEvent(
+      entries,
+      "password_reset_request",
+      result.resetRequestId,
+    );
     const forbiddenKeys = new Set([
       "email",
       "password",
@@ -210,7 +249,9 @@ async function probeObservability() {
 }
 
 async function probeDamageControl() {
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "bearly-secure-incident-response-"));
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "bearly-secure-incident-response-"),
+  );
   const previousDatabaseUrl = process.env.DATABASE_URL;
   process.env.DATABASE_URL = join(temporaryDirectory, "probe.sqlite");
   let database;
@@ -262,10 +303,15 @@ async function probeDamageControl() {
     insertProbeSession("old-session", "2030-01-02T00:00:00.100Z");
     insertProbeSession("boundary-session", "2030-01-02T00:00:00.500Z");
     insertProbeSession("new-session", "2030-01-02T00:00:00.900Z");
-    insertProbeSession("already-revoked-session", "2030-01-01T00:00:00.000Z", originalRevokedAt);
+    insertProbeSession(
+      "already-revoked-session",
+      "2030-01-01T00:00:00.000Z",
+      originalRevokedAt,
+    );
 
     const currentDatabaseTime = () =>
-      database.prepare("SELECT CURRENT_TIMESTAMP AS currentTime").get().currentTime;
+      database.prepare("SELECT CURRENT_TIMESTAMP AS currentTime").get()
+        .currentTime;
     const databaseTimeBefore = currentDatabaseTime();
     const revoked = revokeAllActiveSessions(database);
     const databaseTimeAfter = currentDatabaseTime();
@@ -284,13 +330,23 @@ async function probeDamageControl() {
           WHERE token_hash IN (?, ?, ?)
         `,
       )
-      .get(fastHash("old-session"), fastHash("boundary-session"), fastHash("new-session"));
+      .get(
+        fastHash("old-session"),
+        fastHash("boundary-session"),
+        fastHash("new-session"),
+      );
 
     return {
       revoked,
-      oldSessionActive: Boolean(getCurrentSession(database, "session_id=old-session")),
-      boundarySessionActive: Boolean(getCurrentSession(database, "session_id=boundary-session")),
-      newSessionActive: Boolean(getCurrentSession(database, "session_id=new-session")),
+      oldSessionActive: Boolean(
+        getCurrentSession(database, "session_id=old-session"),
+      ),
+      boundarySessionActive: Boolean(
+        getCurrentSession(database, "session_id=boundary-session"),
+      ),
+      newSessionActive: Boolean(
+        getCurrentSession(database, "session_id=new-session"),
+      ),
       revocationTimestampMatchesDatabaseClock:
         Number(activeRevocationTimestamps.distinctTimestampCount) === 1 &&
         typeof activeRevocationTimestamps.earliestRevocation === "string" &&
@@ -365,15 +421,21 @@ async function probeAlerts() {
       deps.db.close();
     }
 
-    const appendedLog = readFileSync(logPath).subarray(originalLog.length).toString("utf8");
+    const appendedLog = readFileSync(logPath)
+      .subarray(originalLog.length)
+      .toString("utf8");
     const alerts = appendedLog
       .trim()
       .split("\n")
       .filter(Boolean)
       .map((line) => JSON.parse(line))
       .filter((entry) => entry.event === "security_alert");
-    const loginAlerts = alerts.filter((entry) => entry.signal === "failed_logins");
-    const resetAlerts = alerts.filter((entry) => entry.signal === "password_reset_requests");
+    const loginAlerts = alerts.filter(
+      (entry) => entry.signal === "failed_logins",
+    );
+    const resetAlerts = alerts.filter(
+      (entry) => entry.signal === "password_reset_requests",
+    );
 
     return {
       login: loginProbe.statuses,
@@ -389,7 +451,8 @@ async function probeAlerts() {
       knownResetCounted: knownResetProbe.knownResetCounted,
       loginAlert: loginAlerts.every((entry) => validAlert(entry, 3, 300)),
       resetAlert: resetAlerts.every((entry) => validAlert(entry, 3, 600)),
-      alertCountsMatchProbes: loginAlerts.length === 3 && resetAlerts.length === 2,
+      alertCountsMatchProbes:
+        loginAlerts.length === 3 && resetAlerts.length === 2,
       emailAddressesAbsent: !appendedLog.includes("@example.com"),
     };
   } finally {
@@ -401,7 +464,15 @@ async function probeAlerts() {
   }
 }
 
-async function probeAlertWindow({ createApp, fields, logOffset, logPath, path, signal, windowMs }) {
+async function probeAlertWindow({
+  createApp,
+  fields,
+  logOffset,
+  logPath,
+  path,
+  signal,
+  windowMs,
+}) {
   const originalDateNow = Date.now;
   let now = 1_700_000_000_000;
   Date.now = () => now;
@@ -420,10 +491,12 @@ async function probeAlertWindow({ createApp, fields, logOffset, logPath, path, s
       for (let index = 3; index < 5; index += 1) {
         statuses.push((await postForm(origin, path, fields(index))).status);
       }
-      const alertAtThreshold = countSecurityAlerts(logPath, logOffset, signal) === 1;
+      const alertAtThreshold =
+        countSecurityAlerts(logPath, logOffset, signal) === 1;
 
       statuses.push((await postForm(origin, path, fields(5))).status);
-      const alertNotDuplicated = countSecurityAlerts(logPath, logOffset, signal) === 1;
+      const alertNotDuplicated =
+        countSecurityAlerts(logPath, logOffset, signal) === 1;
 
       return { alertAtThreshold, alertNotDuplicated, statuses, windowReset };
     });
@@ -455,7 +528,8 @@ async function probeSuccessfulLoginIsIgnored({ createApp, logPath }) {
       undefined,
       { redirect: "manual" },
     );
-    const noAlertAfterSuccess = countSecurityAlerts(logPath, logOffset, "failed_logins") === 0;
+    const noAlertAfterSuccess =
+      countSecurityAlerts(logPath, logOffset, "failed_logins") === 0;
     const thresholdLogin = await postForm(origin, "/login", {
       email: "ignored-success-third@example.com",
       password: "incorrect",
@@ -488,7 +562,10 @@ async function probeFailedTotpCounts({ createApp, logPath }) {
       undefined,
       { redirect: "manual" },
     );
-    const challengeCookie = readResponseCookie(totpPassword, "totp_login_challenge");
+    const challengeCookie = readResponseCookie(
+      totpPassword,
+      "totp_login_challenge",
+    );
     const firstFailedLogin = await postForm(origin, "/login", {
       email: "totp-first@example.com",
       password: "incorrect",
@@ -497,12 +574,19 @@ async function probeFailedTotpCounts({ createApp, logPath }) {
       email: "totp-second@example.com",
       password: "incorrect",
     });
-    const noAlertBeforeTotpFailure = countSecurityAlerts(logPath, logOffset, "failed_logins") === 0;
+    const noAlertBeforeTotpFailure =
+      countSecurityAlerts(logPath, logOffset, "failed_logins") === 0;
     const failedTotp = challengeCookie
-      ? await postForm(origin, "/login/totp", { mfaCode: "not-a-code" }, undefined, {
-          cookie: challengeCookie,
-          redirect: "manual",
-        })
+      ? await postForm(
+          origin,
+          "/login/totp",
+          { mfaCode: "not-a-code" },
+          undefined,
+          {
+            cookie: challengeCookie,
+            redirect: "manual",
+          },
+        )
       : undefined;
 
     return {
@@ -531,7 +615,9 @@ async function probeKnownResetCounts({ createApp, logPath }) {
     let knownReset;
     try {
       console.log = () => {};
-      knownReset = await postForm(origin, "/password-reset", { email: "mabel@example.com" });
+      knownReset = await postForm(origin, "/password-reset", {
+        email: "mabel@example.com",
+      });
     } finally {
       console.log = originalConsoleLog;
     }
@@ -541,7 +627,8 @@ async function probeKnownResetCounts({ createApp, logPath }) {
         firstUnknownReset.status === 200 &&
         secondUnknownReset.status === 200 &&
         knownReset?.status === 200 &&
-        countSecurityAlerts(logPath, logOffset, "password_reset_requests") === 1,
+        countSecurityAlerts(logPath, logOffset, "password_reset_requests") ===
+          1,
     };
   });
 }
@@ -554,7 +641,9 @@ function countSecurityAlerts(logPath, logOffset, signal) {
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line))
-    .filter((entry) => entry.event === "security_alert" && entry.signal === signal).length;
+    .filter(
+      (entry) => entry.event === "security_alert" && entry.signal === signal,
+    ).length;
 }
 
 async function probeSecurityTxt() {
@@ -568,7 +657,8 @@ async function probeSecurityTxt() {
       const body = await response.text();
       const lines = body.split(/\r?\n/);
       const expiresFields = lines.filter((line) => /^Expires:/i.test(line));
-      const expiresValue = expiresFields[0]?.slice("Expires:".length).trim() ?? "";
+      const expiresValue =
+        expiresFields[0]?.slice("Expires:".length).trim() ?? "";
       const expiresAt = parseRfc3339(expiresValue);
       const checkedAt = new Date();
       const oneYearFromNow = new Date(checkedAt);
@@ -577,8 +667,10 @@ async function probeSecurityTxt() {
       return {
         oneExpiresField: expiresFields.length === 1,
         expiresIsRfc3339: Number.isFinite(expiresAt),
-        expiresIsFuture: Number.isFinite(expiresAt) && expiresAt > checkedAt.getTime(),
-        expiresWithinOneYear: Number.isFinite(expiresAt) && expiresAt < oneYearFromNow.getTime(),
+        expiresIsFuture:
+          Number.isFinite(expiresAt) && expiresAt > checkedAt.getTime(),
+        expiresWithinOneYear:
+          Number.isFinite(expiresAt) && expiresAt < oneYearFromNow.getTime(),
       };
     });
   } finally {
@@ -630,7 +722,9 @@ function validAuthEvent(entry, outcome) {
 }
 
 function findEvent(entries, eventName, requestId) {
-  return entries.find((entry) => entry.event === eventName && entry.requestId === requestId);
+  return entries.find(
+    (entry) => entry.event === eventName && entry.requestId === requestId,
+  );
 }
 
 function validRequestId(value) {

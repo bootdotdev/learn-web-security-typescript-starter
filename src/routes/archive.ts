@@ -1,10 +1,18 @@
-import { Router, type NextFunction, type Request, type Response } from "express";
+import {
+  Router,
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import type { Dependencies } from "../dependencies.ts";
 import { requireAuth } from "../auth/accessControl.ts";
 import type { CurrentSession } from "../auth/sessions.ts";
 import { sendErrorPage } from "../errors.ts";
 import { renderArchivePage } from "../views/archive.ts";
-import { ArchiveImportError, extractTaxDocumentArchive } from "../uploads/archive.ts";
+import {
+  ArchiveImportError,
+  extractTaxDocumentArchive,
+} from "../uploads/archive.ts";
 import { createImportedTaxDocuments } from "../uploads/importedTaxDocuments.ts";
 import { createUploadMiddleware } from "../uploads/middleware.ts";
 
@@ -15,41 +23,59 @@ export function createArchiveRouter(deps: Dependencies): Router {
 
   router.get("/support/tax-exemptions/import", requireSupport, (req, res) => {
     const current = res.locals.currentSession as CurrentSession;
-    res.type("html").send(renderArchivePage(current, parseImportedCount(req.query.imported)));
+    res
+      .type("html")
+      .send(renderArchivePage(current, parseImportedCount(req.query.imported)));
   });
 
-  router.post("/support/tax-exemptions/import", requireSupport, uploadTaxArchive, (req, res) => {
-    const current = res.locals.currentSession as CurrentSession;
-    if (!req.file) {
-      res
-        .status(400)
-        .type("html")
-        .send(renderArchivePage(current, undefined, "Choose a ZIP archive."));
-      return;
-    }
-
-    try {
-      const extractedArchive = extractTaxDocumentArchive(deps.keyring, req.file.buffer);
-      const importedDocuments = createImportedTaxDocuments(db, current.user.id, extractedArchive);
-      res.redirect(
-        303,
-        `/support/tax-exemptions/import?${new URLSearchParams({
-          imported: String(importedDocuments.length),
-        })}`,
-      );
-    } catch (error) {
-      if (!(error instanceof ArchiveImportError)) {
-        throw error;
+  router.post(
+    "/support/tax-exemptions/import",
+    requireSupport,
+    uploadTaxArchive,
+    (req, res) => {
+      const current = res.locals.currentSession as CurrentSession;
+      if (!req.file) {
+        res
+          .status(400)
+          .type("html")
+          .send(renderArchivePage(current, undefined, "Choose a ZIP archive."));
+        return;
       }
 
-      res
-        .status(error.statusCode)
-        .type("html")
-        .send(renderArchivePage(current, undefined, error.message));
-    }
-  });
+      try {
+        const extractedArchive = extractTaxDocumentArchive(
+          deps.keyring,
+          req.file.buffer,
+        );
+        const importedDocuments = createImportedTaxDocuments(
+          db,
+          current.user.id,
+          extractedArchive,
+        );
+        res.redirect(
+          303,
+          `/support/tax-exemptions/import?${new URLSearchParams({
+            imported: String(importedDocuments.length),
+          })}`,
+        );
+      } catch (error) {
+        if (!(error instanceof ArchiveImportError)) {
+          throw error;
+        }
 
-  function requireSupport(req: Request, res: Response, next: NextFunction): void {
+        res
+          .status(error.statusCode)
+          .type("html")
+          .send(renderArchivePage(current, undefined, error.message));
+      }
+    },
+  );
+
+  function requireSupport(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
     const current = requireAuth(db, req, res, {
       returnTo: "/support/tax-exemptions/import",
     });
@@ -58,7 +84,12 @@ export function createArchiveRouter(deps: Dependencies): Router {
     }
 
     if (current.user.role !== "support" && current.user.role !== "admin") {
-      sendErrorPage(res, 403, "Forbidden", "You don't have permission to view this page.");
+      sendErrorPage(
+        res,
+        403,
+        "Forbidden",
+        "You don't have permission to view this page.",
+      );
       return;
     }
 

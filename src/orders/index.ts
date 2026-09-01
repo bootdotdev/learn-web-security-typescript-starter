@@ -7,7 +7,9 @@ type OrderStatus = "pending" | "paid" | "shipped" | "refunded";
 
 export class InsufficientInventoryError extends Error {
   constructor() {
-    super("One or more cart items are no longer available in the requested quantity.");
+    super(
+      "One or more cart items are no longer available in the requested quantity.",
+    );
     this.name = "InsufficientInventoryError";
   }
 }
@@ -43,7 +45,10 @@ export function createOrderFromCart(
   keyring: Keyring | undefined,
 ): Order {
   const totalCents = getCartTotalCents(items) - discountCents;
-  const encryptedShippingDetails = encryptShippingDetails(shippingDetails, keyring);
+  const encryptedShippingDetails = encryptShippingDetails(
+    shippingDetails,
+    keyring,
+  );
 
   db.exec("BEGIN");
 
@@ -80,7 +85,11 @@ export function createOrderFromCart(
     );
 
     for (const item of items) {
-      const inventoryResult = decrementInventory.run(item.quantity, item.product_id, item.quantity);
+      const inventoryResult = decrementInventory.run(
+        item.quantity,
+        item.product_id,
+        item.quantity,
+      );
       if (inventoryResult.changes !== 1) {
         throw new InsufficientInventoryError();
       }
@@ -166,7 +175,10 @@ export function listAllOrders(db: DatabaseSync): Order[] {
     .all() as Order[];
 }
 
-export function findOrderById(db: DatabaseSync, orderId: number): Order | undefined {
+export function findOrderById(
+  db: DatabaseSync,
+  orderId: number,
+): Order | undefined {
   return db
     .prepare(
       `

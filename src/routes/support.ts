@@ -2,7 +2,11 @@ import { Router } from "express";
 import { requireRole } from "../auth/accessControl.ts";
 import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
-import { findOrderById, listAllOrders, listOrderItems } from "../orders/index.ts";
+import {
+  findOrderById,
+  listAllOrders,
+  listOrderItems,
+} from "../orders/index.ts";
 import { decryptShippingDetails } from "../orders/shipping.ts";
 import { listAllUploadedFiles } from "../uploads/index.ts";
 import { listImportedTaxDocuments } from "../uploads/importedTaxDocuments.ts";
@@ -22,7 +26,12 @@ export function createSupportRouter(deps: Dependencies): Router {
     if (!current) return;
     res
       .type("html")
-      .send(renderSupportDashboard(current.user.display_name, current.user.role === "admin"));
+      .send(
+        renderSupportDashboard(
+          current.user.display_name,
+          current.user.role === "admin",
+        ),
+      );
   });
 
   router.get("/support/orders", (req, res) => {
@@ -60,13 +69,23 @@ export function createSupportRouter(deps: Dependencies): Router {
 
     const orderId = Number(req.params.id);
     if (!Number.isSafeInteger(orderId)) {
-      sendErrorPage(res, 404, "Order Not Found", "We couldn't find that order.");
+      sendErrorPage(
+        res,
+        404,
+        "Order Not Found",
+        "We couldn't find that order.",
+      );
       return;
     }
 
     const order = findOrderById(db, orderId);
     if (!order) {
-      sendErrorPage(res, 404, "Order Not Found", "We couldn't find that order.");
+      sendErrorPage(
+        res,
+        404,
+        "Order Not Found",
+        "We couldn't find that order.",
+      );
       return;
     }
 

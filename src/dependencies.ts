@@ -35,7 +35,10 @@ export function initDependencies(
   }
 
   const acornFulfillmentDelayMs = Number(env.ACORN_FULFILLMENT_DELAY_MS ?? "0");
-  if (!Number.isFinite(acornFulfillmentDelayMs) || acornFulfillmentDelayMs < 0) {
+  if (
+    !Number.isFinite(acornFulfillmentDelayMs) ||
+    acornFulfillmentDelayMs < 0
+  ) {
     throw new Error("ACORN_FULFILLMENT_DELAY_MS must be a non-negative number");
   }
 

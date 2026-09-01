@@ -3,12 +3,20 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const assetsDirectory = fileURLToPath(new URL("../attacker-lab/", import.meta.url));
+const assetsDirectory = fileURLToPath(
+  new URL("../attacker-lab/", import.meta.url),
+);
 
 const assets = new Map([
   ["/", { file: "index.html", contentType: "text/html; charset=utf-8" }],
-  ["/index.html", { file: "index.html", contentType: "text/html; charset=utf-8" }],
-  ["/attacker-lab.css", { file: "attacker-lab.css", contentType: "text/css; charset=utf-8" }],
+  [
+    "/index.html",
+    { file: "index.html", contentType: "text/html; charset=utf-8" },
+  ],
+  [
+    "/attacker-lab.css",
+    { file: "attacker-lab.css", contentType: "text/css; charset=utf-8" },
+  ],
   [
     "/attacker-lab.js",
     {
@@ -66,7 +74,8 @@ function parsePort(value) {
   return port;
 }
 
-const isMainModule = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+const isMainModule =
+  process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 
 if (isMainModule) {
   const port = parsePort(process.env.ATTACKER_LAB_PORT ?? "4000");
@@ -74,7 +83,8 @@ if (isMainModule) {
 
   server.listen(port, "127.0.0.1", () => {
     const address = server.address();
-    const listeningPort = typeof address === "object" && address ? address.port : port;
+    const listeningPort =
+      typeof address === "object" && address ? address.port : port;
     console.log(`Attacker lab running at http://localhost:${listeningPort}`);
   });
 }

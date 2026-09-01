@@ -1,5 +1,10 @@
 import type { Product, ProductInput } from "../products.ts";
-import { escapeHtml, formatMoney, renderAccountLink, renderPage } from "./layout.ts";
+import {
+  escapeHtml,
+  formatMoney,
+  renderAccountLink,
+  renderPage,
+} from "./layout.ts";
 
 export function renderAdminDashboard(displayName: string): string {
   return renderPage(
@@ -14,7 +19,10 @@ export function renderAdminDashboard(displayName: string): string {
   );
 }
 
-export function renderAdminProductsPage(products: Product[], displayName: string): string {
+export function renderAdminProductsPage(
+  products: Product[],
+  displayName: string,
+): string {
   const rows = products
     .map(
       (product) => `<tr>
@@ -41,7 +49,10 @@ export function renderAdminProductsPage(products: Product[], displayName: string
   );
 }
 
-export function renderAdminProductPage(product: Product, displayName: string): string {
+export function renderAdminProductPage(
+  product: Product,
+  displayName: string,
+): string {
   const marginCents = product.price_cents - product.cost_cents;
   return renderPage(
     `Admin Product #${product.id}`,

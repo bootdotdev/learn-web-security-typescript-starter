@@ -53,7 +53,10 @@ export function createSession(
   return { ...session, token };
 }
 
-function findStoredSession(db: DatabaseSync, tokenHash: string): StoredSession | undefined {
+function findStoredSession(
+  db: DatabaseSync,
+  tokenHash: string,
+): StoredSession | undefined {
   return db
     .prepare(`
       SELECT user_id, csrf_token, expires_at, revoked_at, last_authenticated_at, created_at
@@ -86,7 +89,10 @@ export function getCurrentSession(
   return { session, user };
 }
 
-function getCookie(cookieHeader: string | undefined, name: string): string | undefined {
+function getCookie(
+  cookieHeader: string | undefined,
+  name: string,
+): string | undefined {
   if (!cookieHeader) {
     return undefined;
   }

@@ -89,13 +89,21 @@ export function requireRole(
   }
 
   if (!hasRole(current, ...allowedRoles)) {
-    sendErrorPage(res, 403, "Forbidden", "You don't have permission to view this page.");
+    sendErrorPage(
+      res,
+      403,
+      "Forbidden",
+      "You don't have permission to view this page.",
+    );
     return undefined;
   }
 
   return current;
 }
 
-export function hasRole(current: CurrentSession | undefined, ...allowedRoles: UserRole[]): boolean {
+export function hasRole(
+  current: CurrentSession | undefined,
+  ...allowedRoles: UserRole[]
+): boolean {
   return current !== undefined && allowedRoles.includes(current.user.role);
 }

@@ -48,7 +48,9 @@ try {
       (document) => document.originalName === "..notes/file.pdf",
     );
     safeDotDotName = safeDotDotDocument
-      ? readArchiveDocument(safeDotDotDocument.storagePath).subarray(5).toString("utf8")
+      ? readArchiveDocument(safeDotDotDocument.storagePath)
+          .subarray(5)
+          .toString("utf8")
       : "";
   } catch {
     safeDotDotName = "";
@@ -89,13 +91,18 @@ try {
   console.log(
     JSON.stringify({
       normal: normalDocument
-        ? readArchiveDocument(normalDocument.storagePath).subarray(5).toString("utf8")
+        ? readArchiveDocument(normalDocument.storagePath)
+            .subarray(5)
+            .toString("utf8")
         : "",
       safeDotDotName,
       absoluteRejected,
       rejected,
       escaped: existsSync(escapedPath),
-      partial: !sameEntries(entriesBeforeRejectedImport, entriesAfterRejectedImport),
+      partial: !sameEntries(
+        entriesBeforeRejectedImport,
+        entriesAfterRejectedImport,
+      ),
     }),
   );
 } finally {
@@ -110,11 +117,16 @@ try {
 }
 
 function listImportEntries() {
-  return existsSync(extractionDirectory) ? readdirSync(extractionDirectory).sort() : [];
+  return existsSync(extractionDirectory)
+    ? readdirSync(extractionDirectory).sort()
+    : [];
 }
 
 function sameEntries(left, right) {
-  return left.length === right.length && left.every((entry, index) => entry === right[index]);
+  return (
+    left.length === right.length &&
+    left.every((entry, index) => entry === right[index])
+  );
 }
 
 function isInsideDirectory(directory, candidatePath) {

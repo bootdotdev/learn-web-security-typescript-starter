@@ -61,7 +61,9 @@ if (registerBtn) {
     registerBtn.textContent = "Waiting for passkey…";
 
     try {
-      const beginRes = await fetch("/account/passkey/begin", { method: "POST" });
+      const beginRes = await fetch("/account/passkey/begin", {
+        method: "POST",
+      });
       if (beginRes.status === 401 || beginRes.status === 403) {
         window.location.href = passkeyManagementLoginUrl;
         return;

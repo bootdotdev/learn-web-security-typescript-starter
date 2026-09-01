@@ -1,13 +1,27 @@
 import type { Dependencies } from "../dependencies.ts";
 import { Router, type Response } from "express";
 import { requireAuth } from "../auth/accessControl.ts";
-import { getCartItemAvailability, listCartItems, type CartItem } from "../cart.ts";
+import {
+  getCartItemAvailability,
+  listCartItems,
+  type CartItem,
+} from "../cart.ts";
 import { sendErrorPage } from "../errors.ts";
-import { renderCheckoutPage, renderPawPalProcessingPage } from "../views/checkout.ts";
+import {
+  renderCheckoutPage,
+  renderPawPalProcessingPage,
+} from "../views/checkout.ts";
 import { reserveAcornFulfillment } from "../integrations/acornFulfillment.ts";
-import { createPawPalCheckoutUrl, createPawPalReference } from "../integrations/pawpal.ts";
+import {
+  createPawPalCheckoutUrl,
+  createPawPalReference,
+} from "../integrations/pawpal.ts";
 import { logEvent } from "../logger.ts";
-import { createOrderFromCart, findOrderById, InsufficientInventoryError } from "../orders/index.ts";
+import {
+  createOrderFromCart,
+  findOrderById,
+  InsufficientInventoryError,
+} from "../orders/index.ts";
 
 export function sendFulfillmentTimeout(
   response: Response,
@@ -52,7 +66,13 @@ export function createCheckoutRouter(deps: Dependencies): Router {
 
     res
       .type("html")
-      .send(renderCheckoutPage(items, current.session.csrf_token, current.user.display_name));
+      .send(
+        renderCheckoutPage(
+          items,
+          current.session.csrf_token,
+          current.user.display_name,
+        ),
+      );
   });
 
   router.post("/checkout", async (req, res) => {
@@ -206,17 +226,28 @@ export function createCheckoutRouter(deps: Dependencies): Router {
     }
 
     const orderId = Number(req.params.orderId);
-    const order = Number.isSafeInteger(orderId) ? findOrderById(db, orderId) : undefined;
+    const order = Number.isSafeInteger(orderId)
+      ? findOrderById(db, orderId)
+      : undefined;
 
     if (!order || order.user_id !== current.user.id) {
-      sendErrorPage(res, 404, "Order Not Found", "We couldn't find that order.");
+      sendErrorPage(
+        res,
+        404,
+        "Order Not Found",
+        "We couldn't find that order.",
+      );
       return;
     }
 
     res
       .type("html")
       .send(
-        renderPawPalProcessingPage(orderId, String(res.locals.cspNonce), current.user.display_name),
+        renderPawPalProcessingPage(
+          orderId,
+          String(res.locals.cspNonce),
+          current.user.display_name,
+        ),
       );
   });
 

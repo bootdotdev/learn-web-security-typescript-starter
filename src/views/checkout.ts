@@ -1,5 +1,10 @@
 import { getCartTotalCents, type CartItem } from "../cart.ts";
-import { escapeHtml, formatMoney, renderAccountLink, renderPage } from "./layout.ts";
+import {
+  escapeHtml,
+  formatMoney,
+  renderAccountLink,
+  renderPage,
+} from "./layout.ts";
 
 export function renderCheckoutPage(
   items: CartItem[],

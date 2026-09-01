@@ -4,7 +4,12 @@ import {
   type CartItem,
   type CartItemAvailability,
 } from "../cart.ts";
-import { escapeHtml, formatMoney, renderAccountLink, renderPage } from "./layout.ts";
+import {
+  escapeHtml,
+  formatMoney,
+  renderAccountLink,
+  renderPage,
+} from "./layout.ts";
 
 export function renderCartPage(
   displayName: string,
@@ -21,7 +26,11 @@ export function renderCartPage(
   );
 }
 
-function renderCart(items: CartItem[], totalCents: number, csrfToken: string): string {
+function renderCart(
+  items: CartItem[],
+  totalCents: number,
+  csrfToken: string,
+): string {
   if (items.length === 0) {
     return `<article class="card empty-state">
       <p>Your cart is empty. The bears are trying not to take it personally.</p>
@@ -29,7 +38,9 @@ function renderCart(items: CartItem[], totalCents: number, csrfToken: string): s
     </article>`;
   }
 
-  const checkoutBlocked = items.some((item) => getCartItemAvailability(item) !== "available");
+  const checkoutBlocked = items.some(
+    (item) => getCartItemAvailability(item) !== "available",
+  );
   const rows = items
     .map((item) => {
       const availability = getCartItemAvailability(item);

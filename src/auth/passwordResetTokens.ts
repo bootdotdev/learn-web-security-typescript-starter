@@ -81,7 +81,9 @@ export function resetPasswordWithToken(
           RETURNING user_id
         `,
       )
-      .get(now, hashPasswordResetToken(token), now) as { user_id: number } | undefined;
+      .get(now, hashPasswordResetToken(token), now) as
+      | { user_id: number }
+      | undefined;
 
     if (!consumed) {
       db.exec("COMMIT");
@@ -117,7 +119,9 @@ export function resetPasswordWithToken(
       `,
     ).run(now, consumed.user_id);
 
-    db.prepare("DELETE FROM totp_login_challenges WHERE user_id = ?").run(consumed.user_id);
+    db.prepare("DELETE FROM totp_login_challenges WHERE user_id = ?").run(
+      consumed.user_id,
+    );
 
     db.exec("COMMIT");
     return true;

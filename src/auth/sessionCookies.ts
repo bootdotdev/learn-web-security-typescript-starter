@@ -11,7 +11,10 @@ type CookieSession = {
   expires_at: string;
 };
 
-export function setSessionCookie(response: Response, session: CookieSession): void {
+export function setSessionCookie(
+  response: Response,
+  session: CookieSession,
+): void {
   response.cookie(SESSION_COOKIE_NAME, session.token, sessionCookieOptions);
 }
 

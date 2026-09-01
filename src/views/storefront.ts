@@ -1,6 +1,11 @@
 import type { CurrentSession } from "../auth/sessions.ts";
 import type { Product } from "../products.ts";
-import { escapeHtml, formatMoney, renderAccountLink, renderPage } from "./layout.ts";
+import {
+  escapeHtml,
+  formatMoney,
+  renderAccountLink,
+  renderPage,
+} from "./layout.ts";
 
 export function renderStorefrontPage(
   current: CurrentSession | undefined,
@@ -62,7 +67,10 @@ function renderProductList(
   return products
     .map((product) => {
       const quantityInCart = cartQuantities.get(product.id) ?? 0;
-      const remainingInventory = Math.max(0, product.inventory_count - quantityInCart);
+      const remainingInventory = Math.max(
+        0,
+        product.inventory_count - quantityInCart,
+      );
       const availability =
         product.inventory_count === 0
           ? `<p class="out-of-stock">Out of stock</p>`

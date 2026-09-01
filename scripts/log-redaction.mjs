@@ -4,7 +4,9 @@ import { logEvent } from "../src/logger.ts";
 
 const mode = process.argv[2];
 if (mode !== "security-fields" && mode !== "pii-fields") {
-  throw new Error("Usage: node scripts/log-redaction.mjs <security-fields|pii-fields>");
+  throw new Error(
+    "Usage: node scripts/log-redaction.mjs <security-fields|pii-fields>",
+  );
 }
 
 const logPath = resolve("data/bearly-secure.log");
@@ -38,7 +40,10 @@ try {
   logEvent("log_redaction_probe", fields);
 
   const updatedLog = readFileSync(logPath);
-  const appendedEntry = updatedLog.subarray(originalLog.length).toString("utf8").trim();
+  const appendedEntry = updatedLog
+    .subarray(originalLog.length)
+    .toString("utf8")
+    .trim();
   const parsedEntry = JSON.parse(appendedEntry);
 
   console.log(JSON.stringify(parsedEntry));

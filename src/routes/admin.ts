@@ -37,7 +37,11 @@ export function createAdminRouter(deps: Dependencies): Router {
       return;
     }
 
-    res.type("html").send(renderAdminProductsPage(listAllProducts(db), current.user.display_name));
+    res
+      .type("html")
+      .send(
+        renderAdminProductsPage(listAllProducts(db), current.user.display_name),
+      );
   });
 
   router.get("/admin/products/new", (req, res) => {
@@ -165,7 +169,9 @@ export function createAdminRouter(deps: Dependencies): Router {
       return;
     }
 
-    res.type("html").send(renderAdminProductPage(product, current.user.display_name));
+    res
+      .type("html")
+      .send(renderAdminProductPage(product, current.user.display_name));
   });
 
   return router;
@@ -183,23 +189,40 @@ function requireRole(
     return undefined;
   }
   const staffRoles = ["support", "admin"];
-  if (staffRoles.includes(current.user.role) && !allowedRoles.includes(current.user.role)) {
+  if (
+    staffRoles.includes(current.user.role) &&
+    !allowedRoles.includes(current.user.role)
+  ) {
     res.status(403).send("Forbidden");
     return undefined;
   }
   return current;
 }
 
-function requireProduct(db: DatabaseSync, req: Request, res: Response): Product | undefined {
+function requireProduct(
+  db: DatabaseSync,
+  req: Request,
+  res: Response,
+): Product | undefined {
   const productId = Number(req.params.id);
   if (!Number.isSafeInteger(productId)) {
-    sendErrorPage(res, 404, "Product Not Found", "We couldn't find that product.");
+    sendErrorPage(
+      res,
+      404,
+      "Product Not Found",
+      "We couldn't find that product.",
+    );
     return undefined;
   }
 
   const product = findAnyProductById(db, productId);
   if (!product) {
-    sendErrorPage(res, 404, "Product Not Found", "We couldn't find that product.");
+    sendErrorPage(
+      res,
+      404,
+      "Product Not Found",
+      "We couldn't find that product.",
+    );
     return undefined;
   }
 
@@ -208,7 +231,9 @@ function requireProduct(db: DatabaseSync, req: Request, res: Response): Product 
 
 function parseProductInput(
   body: unknown,
-): { ok: true; input: ProductInput } | { ok: false; input: ProductInput; error: string } {
+):
+  | { ok: true; input: ProductInput }
+  | { ok: false; input: ProductInput; error: string } {
   const form = body as Record<string, unknown>;
   const input: ProductInput = {
     name: String(form.name ?? "").trim(),
@@ -220,8 +245,16 @@ function parseProductInput(
     is_active: form.isActive === "1" ? 1 : 0,
   };
 
-  if (input.name.length === 0 || input.description.length === 0 || input.image_path.length === 0) {
-    return { ok: false, input, error: "Name, description, and image path are required." };
+  if (
+    input.name.length === 0 ||
+    input.description.length === 0 ||
+    input.image_path.length === 0
+  ) {
+    return {
+      ok: false,
+      input,
+      error: "Name, description, and image path are required.",
+    };
   }
 
   if (!isWholeNumber(input.price_cents) || !isWholeNumber(input.cost_cents)) {
@@ -229,7 +262,11 @@ function parseProductInput(
   }
 
   if (!isWholeNumber(input.inventory_count)) {
-    return { ok: false, input, error: "Inventory count must be a whole number." };
+    return {
+      ok: false,
+      input,
+      error: "Inventory count must be a whole number.",
+    };
   }
 
   return { ok: true, input };

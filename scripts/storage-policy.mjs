@@ -1,7 +1,13 @@
 import { createHash, createHmac } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import http from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -11,7 +17,9 @@ if (existsSync(".env")) {
 }
 
 const LEGACY_DEMO_PASSWORD = "password123";
-const LEGACY_DEMO_HASH = createHash("sha256").update(LEGACY_DEMO_PASSWORD).digest("hex");
+const LEGACY_DEMO_HASH = createHash("sha256")
+  .update(LEGACY_DEMO_PASSWORD)
+  .digest("hex");
 const mode = process.argv[2];
 
 let result;
@@ -67,7 +75,9 @@ async function probeEncryption() {
     tamperRejected: rejects(() => decrypt(tampered, key)),
     wrongKeyRejected: rejects(() => decrypt(first, Buffer.alloc(32, 34))),
     shortKeyRejected: rejects(() => encrypt(plaintext, Buffer.alloc(31))),
-    malformedPayloadRejected: rejects(() => decrypt({ ...first, nonce: Buffer.alloc(11) }, key)),
+    malformedPayloadRejected: rejects(() =>
+      decrypt({ ...first, nonce: Buffer.alloc(11) }, key),
+    ),
     malformedAuthTagRejected: rejects(() =>
       decrypt({ ...first, authTag: first.authTag.subarray(0, 12) }, key),
     ),
@@ -83,7 +93,10 @@ async function probeKeyring() {
     DATA_ENCRYPTION_ACTIVE_VERSION: "v1",
     DATA_ENCRYPTION_KEY_V1: v1,
   });
-  const oldPayload = encryptWithKeyring(Buffer.from("old document"), originalKeyring);
+  const oldPayload = encryptWithKeyring(
+    Buffer.from("old document"),
+    originalKeyring,
+  );
   const rotatedKeyring = loadKeyring({
     DATA_ENCRYPTION_ACTIVE_VERSION: "v2",
     DATA_ENCRYPTION_KEY_V1: v1,
@@ -92,7 +105,9 @@ async function probeKeyring() {
   const binaryPlaintext = Buffer.from([0, 1, 127, 128, 254, 255]);
   const newPayload = encryptWithKeyring(binaryPlaintext, rotatedKeyring);
   const startupEnvironment = Object.fromEntries(
-    Object.entries(process.env).filter(([name]) => !name.startsWith("DATA_ENCRYPTION_")),
+    Object.entries(process.env).filter(
+      ([name]) => !name.startsWith("DATA_ENCRYPTION_"),
+    ),
   );
   startupEnvironment.PAWPAL_API_KEY = "local-keyring-probe-key";
   startupEnvironment.DOWNLOAD_SIGNING_KEY = "20".repeat(32);
@@ -105,9 +120,13 @@ async function probeKeyring() {
     keyLengthsValid: [...rotatedKeyring.keys.values()].every(
       (key) => Buffer.isBuffer(key) && key.length === 32,
     ),
-    roundTrip: decryptWithKeyring(newPayload, rotatedKeyring).equals(binaryPlaintext),
+    roundTrip: decryptWithKeyring(newPayload, rotatedKeyring).equals(
+      binaryPlaintext,
+    ),
     oldVersion: oldPayload.keyVersion,
-    oldReadable: decryptWithKeyring(oldPayload, rotatedKeyring).toString("utf8") === "old document",
+    oldReadable:
+      decryptWithKeyring(oldPayload, rotatedKeyring).toString("utf8") ===
+      "old document",
     unknownVersionRejected: rejects(() =>
       decryptWithKeyring({ ...oldPayload, keyVersion: "v3" }, rotatedKeyring),
     ),
@@ -131,13 +150,17 @@ async function probeKeyring() {
 }
 
 async function probeTotpEncryption(key) {
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "bearly-secure-totp-encryption-"));
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "bearly-secure-totp-encryption-"),
+  );
   const logPath = resolve("data/bearly-secure.log");
   const logExisted = existsSync(logPath);
   const originalLog = logExisted ? readFileSync(logPath) : Buffer.alloc(0);
   const environment = {
     ...Object.fromEntries(
-      Object.entries(process.env).filter(([name]) => !name.startsWith("DATA_ENCRYPTION_")),
+      Object.entries(process.env).filter(
+        ([name]) => !name.startsWith("DATA_ENCRYPTION_"),
+      ),
     ),
     PAWPAL_API_KEY: "local-keyring-probe-key",
     DOWNLOAD_SIGNING_KEY: "20".repeat(32),
@@ -150,18 +173,25 @@ async function probeTotpEncryption(key) {
   let server;
 
   try {
-    const seedResult = spawnSync(process.execPath, [resolve("src/db/seed.ts")], {
-      cwd: temporaryDirectory,
-      encoding: "utf8",
-      env: environment,
-    });
+    const seedResult = spawnSync(
+      process.execPath,
+      [resolve("src/db/seed.ts")],
+      {
+        cwd: temporaryDirectory,
+        encoding: "utf8",
+        env: environment,
+      },
+    );
     if (seedResult.status !== 0) {
-      throw new Error(`Could not seed the TOTP encryption probe: ${seedResult.stderr}`);
+      throw new Error(
+        `Could not seed the TOTP encryption probe: ${seedResult.stderr}`,
+      );
     }
 
     const { createApp } = await import("../src/app.ts");
     const { initDependencies } = await import("../src/dependencies.ts");
-    const { decryptStringWithKeyring } = await import("../src/storage/keyring.ts");
+    const { decryptStringWithKeyring } =
+      await import("../src/storage/keyring.ts");
     const deps = initDependencies(environment, temporaryDirectory);
     database = deps.db;
     createApp(deps);
@@ -174,10 +204,14 @@ async function probeTotpEncryption(key) {
     }
 
     const seededRow = database
-      .prepare("SELECT totp_secret FROM users WHERE email = 'wendy@example.com'")
+      .prepare(
+        "SELECT totp_secret FROM users WHERE email = 'wendy@example.com'",
+      )
       .get();
     const encryptedSeededSecret =
-      seededRow && typeof seededRow.totp_secret === "string" ? seededRow.totp_secret : "";
+      seededRow && typeof seededRow.totp_secret === "string"
+        ? seededRow.totp_secret
+        : "";
     const seededSecret = "KXDYU6DRQPRQXLPY236SJJXPNGHQJVUF";
 
     const passwordResponse = await requestProbeApp(address.port, "/login", {
@@ -187,7 +221,10 @@ async function probeTotpEncryption(key) {
         returnTo: "/account",
       },
     });
-    const challengeCookie = readResponseCookie(passwordResponse.headers, "totp_login_challenge");
+    const challengeCookie = readResponseCookie(
+      passwordResponse.headers,
+      "totp_login_challenge",
+    );
     const totpResponse = challengeCookie
       ? await requestProbeApp(address.port, "/login/totp", {
           cookie: challengeCookie,
@@ -202,7 +239,10 @@ async function probeTotpEncryption(key) {
         returnTo: "/account/totp",
       },
     });
-    const mabelSessionCookie = readResponseCookie(mabelLoginResponse.headers, "session_id");
+    const mabelSessionCookie = readResponseCookie(
+      mabelLoginResponse.headers,
+      "session_id",
+    );
     const enrollmentResponse = mabelSessionCookie
       ? await requestProbeApp(address.port, "/account/totp", {
           cookie: mabelSessionCookie,
@@ -214,7 +254,9 @@ async function probeTotpEncryption(key) {
         /Or enter this key manually: <code>([A-Z2-7]+)<\/code>/,
       )?.[1] ?? "";
     const pendingRow = database
-      .prepare("SELECT pending_totp_secret FROM users WHERE email = 'mabel@example.com'")
+      .prepare(
+        "SELECT pending_totp_secret FROM users WHERE email = 'mabel@example.com'",
+      )
       .get();
     const encryptedPendingSecret =
       pendingRow && typeof pendingRow.pending_totp_secret === "string"
@@ -233,14 +275,18 @@ async function probeTotpEncryption(key) {
       )
       .get();
     const encryptedEnrolledSecret =
-      enrolledRow && typeof enrolledRow.totp_secret === "string" ? enrolledRow.totp_secret : "";
+      enrolledRow && typeof enrolledRow.totp_secret === "string"
+        ? enrolledRow.totp_secret
+        : "";
 
     return {
       seededTotpEncrypted:
-        encryptedSeededSecret.length > 0 && !encryptedSeededSecret.includes(seededSecret),
+        encryptedSeededSecret.length > 0 &&
+        !encryptedSeededSecret.includes(seededSecret),
       seededTotpRoundTrip:
         encryptedSeededSecret.length > 0 &&
-        decryptStringWithKeyring(encryptedSeededSecret, deps.keyring) === seededSecret,
+        decryptStringWithKeyring(encryptedSeededSecret, deps.keyring) ===
+          seededSecret,
       seededTotpLoginSucceeded:
         passwordResponse.statusCode === 302 &&
         passwordResponse.headers.location === "/login/totp" &&
@@ -252,12 +298,14 @@ async function probeTotpEncryption(key) {
         enrollmentSecret.length > 0 &&
         encryptedPendingSecret.length > 0 &&
         !encryptedPendingSecret.includes(enrollmentSecret) &&
-        decryptStringWithKeyring(encryptedPendingSecret, deps.keyring) === enrollmentSecret,
+        decryptStringWithKeyring(encryptedPendingSecret, deps.keyring) ===
+          enrollmentSecret,
       newTotpEnrollmentSucceeded:
         confirmationResponse?.statusCode === 200 &&
         enrolledRow?.pending_totp_secret === null &&
         encryptedEnrolledSecret.length > 0 &&
-        decryptStringWithKeyring(encryptedEnrolledSecret, deps.keyring) === enrollmentSecret,
+        decryptStringWithKeyring(encryptedEnrolledSecret, deps.keyring) ===
+          enrollmentSecret,
     };
   } finally {
     if (server) {
@@ -341,7 +389,9 @@ function generateTotpCode(secret) {
   const counter = Math.floor(Date.now() / 30_000);
   const counterBuffer = Buffer.alloc(8);
   counterBuffer.writeBigUInt64BE(BigInt(counter));
-  const digest = createHmac("sha1", Buffer.from(bytes)).update(counterBuffer).digest();
+  const digest = createHmac("sha1", Buffer.from(bytes))
+    .update(counterBuffer)
+    .digest();
   const offset = digest[digest.length - 1] & 0x0f;
   const value = digest.readUInt32BE(offset) & 0x7fffffff;
   return String(value % 1_000_000).padStart(6, "0");
@@ -349,10 +399,13 @@ function generateTotpCode(secret) {
 
 async function probePasswordKdf() {
   return withTemporaryApp(async ({ database, port }) => {
-    const { createPasswordResetToken } = await import("../src/auth/passwordResetTokens.ts");
-    const { hashPassword, verifyPassword } = await import("../src/auth/passwords.ts");
+    const { createPasswordResetToken } =
+      await import("../src/auth/passwordResetTokens.ts");
+    const { hashPassword, verifyPassword } =
+      await import("../src/auth/passwords.ts");
     const { createSession } = await import("../src/auth/sessions.ts");
-    const { generateBackupCodes } = await import("../src/auth/totpBackupCodes.ts");
+    const { generateBackupCodes } =
+      await import("../src/auth/totpBackupCodes.ts");
     const { createUser, findUserByEmail, updateUserPassword } =
       await import("../src/auth/users.ts");
     const originalPassword = "correct horse battery staple";
@@ -366,7 +419,8 @@ async function probePasswordKdf() {
     const createdHash = createdUser.password_hash;
 
     await updateUserPassword(database, createdUser.id, changedPassword);
-    const changedHash = findUserByEmail(database, createdUser.email)?.password_hash ?? "";
+    const changedHash =
+      findUserByEmail(database, createdUser.email)?.password_hash ?? "";
     const directHash = await hashPassword("direct helper password");
     const createdParameters = readArgon2Parameters(createdHash);
     const changedParameters = readArgon2Parameters(changedHash);
@@ -374,9 +428,18 @@ async function probePasswordKdf() {
 
     const routePassword = "route integration password";
     const routeEmail = "route-kdf-probe@example.com";
-    const routeUser = await createUser(database, routeEmail, "Route KDF Probe", routePassword);
+    const routeUser = await createUser(
+      database,
+      routeEmail,
+      "Route KDF Probe",
+      routePassword,
+    );
     const wrongLoginResponse = await requestProbeApp(port, "/login", {
-      form: { email: routeEmail, password: "wrong password", returnTo: "/account" },
+      form: {
+        email: routeEmail,
+        password: "wrong password",
+        returnTo: "/account",
+      },
     });
     const [backupCode] = generateBackupCodes(database, routeUser.id, 1);
     const wrongRecoveryResponse = await requestProbeApp(port, "/recover-mfa", {
@@ -384,14 +447,18 @@ async function probePasswordKdf() {
     });
     const accountSession = createSession(database, routeUser.id);
     const rejectedEmail = "route-kdf-changed@example.com";
-    const wrongEmailChangeResponse = await requestProbeApp(port, "/account/email", {
-      cookie: `session_id=${accountSession.token}`,
-      form: {
-        csrfToken: accountSession.csrf_token,
-        currentPassword: "wrong password",
-        email: rejectedEmail,
+    const wrongEmailChangeResponse = await requestProbeApp(
+      port,
+      "/account/email",
+      {
+        cookie: `session_id=${accountSession.token}`,
+        form: {
+          csrfToken: accountSession.csrf_token,
+          currentPassword: "wrong password",
+          email: rejectedEmail,
+        },
       },
-    });
+    );
 
     const signupPassword = "signup route password";
     const signupEmail = "signup-kdf-probe@example.com";
@@ -402,7 +469,8 @@ async function probePasswordKdf() {
         password: signupPassword,
       },
     });
-    const signupHash = findUserByEmail(database, signupEmail)?.password_hash ?? "";
+    const signupHash =
+      findUserByEmail(database, signupEmail)?.password_hash ?? "";
 
     const resetOriginalPassword = "reset route old password";
     const resetPassword = "reset route new password";
@@ -413,27 +481,54 @@ async function probePasswordKdf() {
       resetOriginalPassword,
     );
     const resetToken = createPasswordResetToken(database, resetUser.id).token;
-    const resetResponse = await requestProbeApp(port, `/password-reset/${resetToken}`, {
-      form: { password: resetPassword },
-    });
-    const resetHash = findUserByEmail(database, resetUser.email)?.password_hash ?? "";
+    const resetResponse = await requestProbeApp(
+      port,
+      `/password-reset/${resetToken}`,
+      {
+        form: { password: resetPassword },
+      },
+    );
+    const resetHash =
+      findUserByEmail(database, resetUser.email)?.password_hash ?? "";
 
     return {
       createdArgon2id: createdHash.startsWith("$argon2id$"),
       createdUsesBaseline: usesPasswordHashBaseline(createdParameters),
-      createdPasswordVerified: await verifyPassword(originalPassword, createdHash),
-      createdWrongPasswordRejected: !(await verifyPassword("wrong password", createdHash)),
+      createdPasswordVerified: await verifyPassword(
+        originalPassword,
+        createdHash,
+      ),
+      createdWrongPasswordRejected: !(await verifyPassword(
+        "wrong password",
+        createdHash,
+      )),
       changedArgon2id: changedHash.startsWith("$argon2id$"),
       changedUsesBaseline: usesPasswordHashBaseline(changedParameters),
-      changedPasswordVerified: await verifyPassword(changedPassword, changedHash),
-      previousPasswordRejected: !(await verifyPassword(originalPassword, changedHash)),
+      changedPasswordVerified: await verifyPassword(
+        changedPassword,
+        changedHash,
+      ),
+      previousPasswordRejected: !(await verifyPassword(
+        originalPassword,
+        changedHash,
+      )),
       directHashArgon2id: directHash.startsWith("$argon2id$"),
       directHashUsesBaseline: usesPasswordHashBaseline(directHashParameters),
-      legacyPasswordVerified: await verifyPassword(LEGACY_DEMO_PASSWORD, LEGACY_DEMO_HASH),
-      legacyWrongPasswordRejected: !(await verifyPassword("wrong password", LEGACY_DEMO_HASH)),
-      malformedHashRejected: !(await verifyPassword(LEGACY_DEMO_PASSWORD, "not-a-hash")),
+      legacyPasswordVerified: await verifyPassword(
+        LEGACY_DEMO_PASSWORD,
+        LEGACY_DEMO_HASH,
+      ),
+      legacyWrongPasswordRejected: !(await verifyPassword(
+        "wrong password",
+        LEGACY_DEMO_HASH,
+      )),
+      malformedHashRejected: !(await verifyPassword(
+        LEGACY_DEMO_PASSWORD,
+        "not-a-hash",
+      )),
       loginRouteRejectsWrongPassword: wrongLoginResponse.statusCode === 401,
-      mfaRecoveryRouteRejectsWrongPassword: wrongRecoveryResponse.statusCode === 401,
+      mfaRecoveryRouteRejectsWrongPassword:
+        wrongRecoveryResponse.statusCode === 401,
       emailChangeRouteRejectsWrongPassword:
         wrongEmailChangeResponse.statusCode === 403 &&
         findUserByEmail(database, routeEmail)?.id === routeUser.id &&
@@ -465,14 +560,20 @@ async function probeArgon2Parameters() {
   return withTemporaryApp(async ({ database, port }) => {
     insertPasswordUser(database, "parameters@example.com", staleHash);
     insertPasswordUser(database, "parameters-failed@example.com", staleHash);
-    insertPasswordUser(database, "parameters-legacy@example.com", LEGACY_DEMO_HASH);
+    insertPasswordUser(
+      database,
+      "parameters-legacy@example.com",
+      LEGACY_DEMO_HASH,
+    );
     const legacyRecoveryUserId = insertPasswordUser(
       database,
       "parameters-recovery@example.com",
       LEGACY_DEMO_HASH,
     );
-    const { generateBackupCodes } = await import("../src/auth/totpBackupCodes.ts");
-    const { confirmTotpSecret, setPendingTotpSecret } = await import("../src/auth/users.ts");
+    const { generateBackupCodes } =
+      await import("../src/auth/totpBackupCodes.ts");
+    const { confirmTotpSecret, setPendingTotpSecret } =
+      await import("../src/auth/users.ts");
     const { loadKeyring } = await import("../src/storage/keyring.ts");
     setPendingTotpSecret(
       database,
@@ -481,9 +582,17 @@ async function probeArgon2Parameters() {
       loadKeyring(),
     );
     confirmTotpSecret(database, legacyRecoveryUserId);
-    const [legacyRecoveryCode] = generateBackupCodes(database, legacyRecoveryUserId, 1);
+    const [legacyRecoveryCode] = generateBackupCodes(
+      database,
+      legacyRecoveryUserId,
+      1,
+    );
 
-    const loginStatus = await postLogin(port, "parameters@example.com", password);
+    const loginStatus = await postLogin(
+      port,
+      "parameters@example.com",
+      password,
+    );
     const failedLoginStatus = await postLogin(
       port,
       "parameters-failed@example.com",
@@ -502,9 +611,18 @@ async function probeArgon2Parameters() {
       },
     });
     const upgradedHash = readPasswordHash(database, "parameters@example.com");
-    const failedHash = readPasswordHash(database, "parameters-failed@example.com");
-    const legacyUpgradedHash = readPasswordHash(database, "parameters-legacy@example.com");
-    const legacyRecoveryHash = readPasswordHash(database, "parameters-recovery@example.com");
+    const failedHash = readPasswordHash(
+      database,
+      "parameters-failed@example.com",
+    );
+    const legacyUpgradedHash = readPasswordHash(
+      database,
+      "parameters-legacy@example.com",
+    );
+    const legacyRecoveryHash = readPasswordHash(
+      database,
+      "parameters-recovery@example.com",
+    );
     const { hashPassword, passwordNeedsRehash, verifyPassword } =
       await import("../src/auth/passwords.ts");
     const currentHash = await hashPassword("current policy password");
@@ -531,16 +649,28 @@ async function probeArgon2Parameters() {
       failedLoginPreservedHash: failedHash === staleHash,
       legacyLoginSucceeded: legacyLoginStatus === 302,
       legacyUpgradedAfterLogin:
-        legacyUpgradedHash !== LEGACY_DEMO_HASH && legacyUpgradedHash.startsWith("$argon2id$"),
-      legacyUpgradeUsesCurrentPolicy: usesPasswordHashBaseline(legacyUpgradedParameters),
-      legacyUpgradeVerified: await verifyPassword(LEGACY_DEMO_PASSWORD, legacyUpgradedHash),
+        legacyUpgradedHash !== LEGACY_DEMO_HASH &&
+        legacyUpgradedHash.startsWith("$argon2id$"),
+      legacyUpgradeUsesCurrentPolicy: usesPasswordHashBaseline(
+        legacyUpgradedParameters,
+      ),
+      legacyUpgradeVerified: await verifyPassword(
+        LEGACY_DEMO_PASSWORD,
+        legacyUpgradedHash,
+      ),
       legacyRecoverySucceeded:
         legacyRecoveryResponse.statusCode === 302 &&
         legacyRecoveryResponse.headers.location === "/account/totp",
       legacyRecoveryUpgraded:
-        legacyRecoveryHash !== LEGACY_DEMO_HASH && legacyRecoveryHash.startsWith("$argon2id$"),
-      legacyRecoveryUsesCurrentPolicy: usesPasswordHashBaseline(legacyRecoveryParameters),
-      legacyRecoveryVerified: await verifyPassword(LEGACY_DEMO_PASSWORD, legacyRecoveryHash),
+        legacyRecoveryHash !== LEGACY_DEMO_HASH &&
+        legacyRecoveryHash.startsWith("$argon2id$"),
+      legacyRecoveryUsesCurrentPolicy: usesPasswordHashBaseline(
+        legacyRecoveryParameters,
+      ),
+      legacyRecoveryVerified: await verifyPassword(
+        LEGACY_DEMO_PASSWORD,
+        legacyRecoveryHash,
+      ),
     };
   });
 }
@@ -551,16 +681,25 @@ async function probeEncryptedFiles() {
     await import("../src/storage/keyring.ts");
   const { zipSync } = await import("fflate");
   const keyring = loadKeyring();
-  const { extractTaxDocumentArchive } = await import("../src/uploads/archive.ts");
-  const { createImportedTaxDocuments } = await import("../src/uploads/importedTaxDocuments.ts");
+  const { extractTaxDocumentArchive } =
+    await import("../src/uploads/archive.ts");
+  const { createImportedTaxDocuments } =
+    await import("../src/uploads/importedTaxDocuments.ts");
   const { readTaxDocument } = await import("../src/uploads/taxDocuments.ts");
   const deps = initDependencies();
   const database = deps.db;
-  const dockerfilePolicy = runJsonPolicy("scripts/container-policy.mjs", "dockerfile");
-  const dockerignorePolicy = runJsonPolicy("scripts/container-policy.mjs", "dockerignore");
+  const dockerfilePolicy = runJsonPolicy(
+    "scripts/container-policy.mjs",
+    "dockerfile",
+  );
+  const dockerignorePolicy = runJsonPolicy(
+    "scripts/container-policy.mjs",
+    "dockerignore",
+  );
   const fixturePath = "data/fixtures/mystery-shack-tax-exemption.pdf";
   const fixtureTracked =
-    spawnSync("git", ["check-ignore", "--no-index", "--quiet", fixturePath]).status === 1;
+    spawnSync("git", ["check-ignore", "--no-index", "--quiet", fixturePath])
+      .status === 1;
   let importedArchive;
   let importedArchiveDocumentId;
   try {
@@ -576,13 +715,17 @@ async function probeEncryptedFiles() {
       .get();
 
     if (!uploadedFile) {
-      throw new Error("The encrypted-file probe requires a seeded uploaded file");
+      throw new Error(
+        "The encrypted-file probe requires a seeded uploaded file",
+      );
     }
 
     const stored = readFileSync(uploadedFile.storage_path);
     const serializedPayload = deserializeEncryptedPayload(stored);
     const plaintext = readTaxDocument(uploadedFile.storage_path, keyring);
-    const fixture = readFileSync(resolve("data/fixtures", uploadedFile.original_name));
+    const fixture = readFileSync(
+      resolve("data/fixtures", uploadedFile.original_name),
+    );
     const tamperedPayload = {
       ...serializedPayload,
       ciphertext: Buffer.from(serializedPayload.ciphertext),
@@ -593,21 +736,37 @@ async function probeEncryptedFiles() {
       keyring,
       Buffer.from(zipSync({ "new-archive-import.pdf": fixture })),
     );
-    const [importedArchiveDocument] = createImportedTaxDocuments(database, 1, importedArchive);
+    const [importedArchiveDocument] = createImportedTaxDocuments(
+      database,
+      1,
+      importedArchive,
+    );
     if (!importedArchiveDocument) {
-      throw new Error("The encrypted-file probe could not create an archive import");
+      throw new Error(
+        "The encrypted-file probe could not create an archive import",
+      );
     }
     importedArchiveDocumentId = importedArchiveDocument.id;
-    const importedArchiveStored = readFileSync(importedArchiveDocument.storage_path);
-    const importedArchivePayload = deserializeEncryptedPayload(importedArchiveStored);
-    const importedArchivePlaintext = readTaxDocument(importedArchiveDocument.storage_path, keyring);
+    const importedArchiveStored = readFileSync(
+      importedArchiveDocument.storage_path,
+    );
+    const importedArchivePayload = deserializeEncryptedPayload(
+      importedArchiveStored,
+    );
+    const importedArchivePlaintext = readTaxDocument(
+      importedArchiveDocument.storage_path,
+      keyring,
+    );
 
     return {
       encryptedExtension: uploadedFile.storage_path.endsWith(".enc"),
       storedFileHasNoPdfHeader: !stored.includes(Buffer.from("%PDF-")),
-      recordsActiveKeyVersion: serializedPayload.keyVersion === keyring.activeVersion,
+      recordsActiveKeyVersion:
+        serializedPayload.keyVersion === keyring.activeVersion,
       seededFixtureRoundTrip: plaintext.equals(fixture),
-      tamperRejected: rejects(() => decryptWithKeyring(tamperedPayload, keyring)),
+      tamperRejected: rejects(() =>
+        decryptWithKeyring(tamperedPayload, keyring),
+      ),
       newArchiveImportEncrypted:
         importedArchiveDocument.storage_path.endsWith(".enc") &&
         !importedArchiveStored.includes(Buffer.from("%PDF-")) &&
@@ -633,7 +792,9 @@ async function probeEncryptedFiles() {
 }
 
 function runJsonPolicy(scriptPath, mode) {
-  const result = spawnSync(process.execPath, [scriptPath, mode], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, [scriptPath, mode], {
+    encoding: "utf8",
+  });
   if (result.status !== 0) {
     throw new Error(`Could not run ${scriptPath} ${mode}: ${result.stderr}`);
   }
@@ -644,11 +805,14 @@ function runJsonPolicy(scriptPath, mode) {
 async function probeFieldEncryption(orderIdValue) {
   const orderId = Number(orderIdValue);
   if (!Number.isInteger(orderId)) {
-    throw new Error("Usage: node scripts/storage-policy.mjs field-encryption <order-id>");
+    throw new Error(
+      "Usage: node scripts/storage-policy.mjs field-encryption <order-id>",
+    );
   }
 
   const { initDependencies } = await import("../src/dependencies.ts");
-  const { deserializeEncryptedPayload, loadKeyring } = await import("../src/storage/keyring.ts");
+  const { deserializeEncryptedPayload, loadKeyring } =
+    await import("../src/storage/keyring.ts");
   const { decryptShippingDetails } = await import("../src/orders/shipping.ts");
   const keyring = loadKeyring();
   const deps = initDependencies();
@@ -665,18 +829,28 @@ async function probeFieldEncryption(orderIdValue) {
       .get(orderId);
 
     if (!order || typeof order.shipping_details_encrypted !== "string") {
-      throw new Error(`Order ${orderId} does not have encrypted shipping details`);
+      throw new Error(
+        `Order ${orderId} does not have encrypted shipping details`,
+      );
     }
 
     const payload = deserializeEncryptedPayload(
       Buffer.from(order.shipping_details_encrypted, "utf8"),
     );
-    const shippingDetails = decryptShippingDetails(order.shipping_details_encrypted, keyring);
-    const plaintextShippingDetails = Buffer.from(JSON.stringify(shippingDetails), "utf8");
+    const shippingDetails = decryptShippingDetails(
+      order.shipping_details_encrypted,
+      keyring,
+    );
+    const plaintextShippingDetails = Buffer.from(
+      JSON.stringify(shippingDetails),
+      "utf8",
+    );
 
     return {
       recordsActiveKeyVersion: payload.keyVersion === keyring.activeVersion,
-      ciphertextDiffersFromPlaintext: !payload.ciphertext.equals(plaintextShippingDetails),
+      ciphertextDiffersFromPlaintext: !payload.ciphertext.equals(
+        plaintextShippingDetails,
+      ),
       shippingDetails,
     };
   } finally {
@@ -685,7 +859,9 @@ async function probeFieldEncryption(orderIdValue) {
 }
 
 async function withTemporaryApp(probe) {
-  const temporaryDirectory = mkdtempSync(join(tmpdir(), "bearly-secure-password-login-"));
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "bearly-secure-password-login-"),
+  );
   const logPath = resolve("data/bearly-secure.log");
   const logExisted = existsSync(logPath);
   const originalLog = logExisted ? readFileSync(logPath) : Buffer.alloc(0);
@@ -747,7 +923,9 @@ function insertPasswordUser(database, email, passwordHash) {
 }
 
 function readPasswordHash(database, email) {
-  const row = database.prepare("SELECT password_hash FROM users WHERE email = ?").get(email);
+  const row = database
+    .prepare("SELECT password_hash FROM users WHERE email = ?")
+    .get(email);
   if (!row || typeof row.password_hash !== "string") {
     throw new Error(`Could not read the password hash for ${email}`);
   }
@@ -756,7 +934,11 @@ function readPasswordHash(database, email) {
 }
 
 function postLogin(port, email, password) {
-  const body = new URLSearchParams({ email, password, returnTo: "/" }).toString();
+  const body = new URLSearchParams({
+    email,
+    password,
+    returnTo: "/",
+  }).toString();
 
   return new Promise((resolvePromise, rejectPromise) => {
     const request = http.request(
@@ -800,7 +982,9 @@ function readArgon2Parameters(passwordHash) {
 
 function usesPasswordHashBaseline(parameters) {
   return (
-    parameters.memoryCost === 19 * 1024 && parameters.timeCost === 2 && parameters.parallelism === 1
+    parameters.memoryCost === 19 * 1024 &&
+    parameters.timeCost === 2 &&
+    parameters.parallelism === 1
   );
 }
 

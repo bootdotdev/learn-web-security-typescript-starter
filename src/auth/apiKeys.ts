@@ -10,7 +10,10 @@ type ApiKey = {
   created_at: string;
 };
 
-export function findApiKey(db: DatabaseSync, apiKey: string): ApiKey | undefined {
+export function findApiKey(
+  db: DatabaseSync,
+  apiKey: string,
+): ApiKey | undefined {
   if (!apiKey) return undefined;
 
   const keyHash = fastHash(apiKey);

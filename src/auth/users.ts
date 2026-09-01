@@ -48,7 +48,10 @@ export async function createUser(
   return user;
 }
 
-export function findUserByEmail(db: DatabaseSync, email: string): User | undefined {
+export function findUserByEmail(
+  db: DatabaseSync,
+  email: string,
+): User | undefined {
   const row = db
     .prepare(
       `
@@ -164,7 +167,9 @@ export function clearTotpSecret(db: DatabaseSync, userId: number): void {
       `,
     ).run(userId);
     db.prepare("DELETE FROM totp_backup_codes WHERE user_id = ?").run(userId);
-    db.prepare("DELETE FROM totp_login_challenges WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM totp_login_challenges WHERE user_id = ?").run(
+      userId,
+    );
     db.exec("COMMIT");
   } catch (error) {
     db.exec("ROLLBACK");
@@ -172,7 +177,11 @@ export function clearTotpSecret(db: DatabaseSync, userId: number): void {
   }
 }
 
-export function updateUserEmail(db: DatabaseSync, userId: number, email: string): void {
+export function updateUserEmail(
+  db: DatabaseSync,
+  userId: number,
+  email: string,
+): void {
   db.prepare(
     `
         UPDATE users
@@ -188,10 +197,12 @@ function getDecryptedTotpSecret(
   column: "totp_secret" | "pending_totp_secret",
   keyring: Keyring | undefined,
 ): string | undefined {
-  const row = db.prepare(`SELECT ${column} AS secret FROM users WHERE id = ?`).get(userId) as
-    | { secret: string | null }
-    | undefined;
-  return row?.secret ? decryptStringWithKeyring(row.secret, keyring) : undefined;
+  const row = db
+    .prepare(`SELECT ${column} AS secret FROM users WHERE id = ?`)
+    .get(userId) as { secret: string | null } | undefined;
+  return row?.secret
+    ? decryptStringWithKeyring(row.secret, keyring)
+    : undefined;
 }
 
 function mapUser(

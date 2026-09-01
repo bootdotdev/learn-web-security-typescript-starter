@@ -5,7 +5,8 @@ const taxFixturePath =
   [
     "data/fixtures/mystery-shack-tax-exemption.pdf",
     "data/uploads/mystery-shack-tax-exemption.pdf",
-  ].find((filePath) => existsSync(filePath)) ?? "data/uploads/mystery-shack-tax-exemption.pdf";
+  ].find((filePath) => existsSync(filePath)) ??
+  "data/uploads/mystery-shack-tax-exemption.pdf";
 
 function readDockerfileInstructions(filePath) {
   const instructions = [];
@@ -25,7 +26,10 @@ function readDockerfileInstructions(filePath) {
 
     const match = logicalLine.match(/^([A-Za-z]+)\s+(.+)$/);
     if (match) {
-      instructions.push({ name: match[1].toUpperCase(), value: match[2].trim() });
+      instructions.push({
+        name: match[1].toUpperCase(),
+        value: match[2].trim(),
+      });
     }
     logicalLine = "";
   }
@@ -72,7 +76,11 @@ function parseCopyInstruction(value) {
     paths = splitShellWords(remaining);
   }
 
-  if (!Array.isArray(paths) || paths.length < 2 || paths.some((path) => typeof path !== "string")) {
+  if (
+    !Array.isArray(paths) ||
+    paths.length < 2 ||
+    paths.some((path) => typeof path !== "string")
+  ) {
     return { options, sources: [], destination: undefined, valid: false };
   }
 
@@ -115,7 +123,8 @@ function buildDockerfileStages(instructions) {
 function hasProductionInstall(stage) {
   return stage.instructions.some(
     (instruction) =>
-      instruction.name === "RUN" && /(?:^|\s)npm\s+ci\s+--omit=dev(?:\s|$)/.test(instruction.value),
+      instruction.name === "RUN" &&
+      /(?:^|\s)npm\s+ci\s+--omit=dev(?:\s|$)/.test(instruction.value),
   );
 }
 
@@ -173,7 +182,8 @@ function inspectProductionDependencySetup(stage) {
       return {
         dependencyWorkdir: workdir === "/app",
         dependencyManifests:
-          copiedManifests.has("package.json") && copiedManifests.has("package-lock.json"),
+          copiedManifests.has("package.json") &&
+          copiedManifests.has("package-lock.json"),
       };
     }
   }
@@ -182,12 +192,16 @@ function inspectProductionDependencySetup(stage) {
 }
 
 function stageReferenceMatches(reference, stage) {
-  return reference === String(stage.index) || reference.toLowerCase() === stage.name;
+  return (
+    reference === String(stage.index) || reference.toLowerCase() === stage.name
+  );
 }
 
 function resolveContainerPath(value, workdir) {
   const normalized = value.replaceAll("\\", "/");
-  return posix.normalize(normalized.startsWith("/") ? normalized : posix.join(workdir, normalized));
+  return posix.normalize(
+    normalized.startsWith("/") ? normalized : posix.join(workdir, normalized),
+  );
 }
 
 function resolveCopyTarget(parsedCopy, source, sourceKind, workdir) {
@@ -214,8 +228,11 @@ function resolveCopyTarget(parsedCopy, source, sourceKind, workdir) {
 function inspectDockerfile(filePath) {
   const instructions = readDockerfileInstructions(filePath);
   const dockerfileStages = buildDockerfileStages(instructions);
-  const dependencyCandidates = dockerfileStages.slice(0, -1).filter(hasProductionInstall);
-  const dependencyStage = dependencyCandidates.length === 1 ? dependencyCandidates[0] : undefined;
+  const dependencyCandidates = dockerfileStages
+    .slice(0, -1)
+    .filter(hasProductionInstall);
+  const dependencyStage =
+    dependencyCandidates.length === 1 ? dependencyCandidates[0] : undefined;
   const runtimeStage = dockerfileStages.at(-1);
   const runtimeInstructions = runtimeStage?.instructions ?? [];
   const dependencySetup = dependencyStage
@@ -227,13 +244,25 @@ function inspectDockerfile(filePath) {
     dependencyStage.index < runtimeStage.index,
   );
   const productionDependencies = Boolean(
-    dependencyStage && dependencySetup.dependencyWorkdir && dependencySetup.dependencyManifests,
+    dependencyStage &&
+    dependencySetup.dependencyWorkdir &&
+    dependencySetup.dependencyManifests,
   );
 
   const contextSources = new Map([
-    ["package.json", { key: "context:package.json", kind: "file", target: "/app/package.json" }],
+    [
+      "package.json",
+      {
+        key: "context:package.json",
+        kind: "file",
+        target: "/app/package.json",
+      },
+    ],
     ["src", { key: "context:src", kind: "source", target: "/app/src" }],
-    ["public", { key: "context:public", kind: "public", target: "/app/public" }],
+    [
+      "public",
+      { key: "context:public", kind: "public", target: "/app/public" },
+    ],
     [
       taxFixturePath,
       {
@@ -277,7 +306,9 @@ function inspectDockerfile(filePath) {
     }
 
     const fromStage =
-      typeof parsedCopy.options.from === "string" ? parsedCopy.options.from : undefined;
+      typeof parsedCopy.options.from === "string"
+        ? parsedCopy.options.from
+        : undefined;
     for (const source of parsedCopy.sources) {
       let expectedSource;
       if (
@@ -296,9 +327,16 @@ function inspectDockerfile(filePath) {
         continue;
       }
 
-      const target = resolveCopyTarget(parsedCopy, source, expectedSource.kind, workdir);
+      const target = resolveCopyTarget(
+        parsedCopy,
+        source,
+        expectedSource.kind,
+        workdir,
+      );
       if (target !== expectedSource.target) {
-        unexpectedRuntimeSources.push(`${source} -> ${target ?? "multiple destinations"}`);
+        unexpectedRuntimeSources.push(
+          `${source} -> ${target ?? "multiple destinations"}`,
+        );
         continue;
       }
 
@@ -311,7 +349,9 @@ function inspectDockerfile(filePath) {
 
   const runtimeCopies =
     unexpectedRuntimeSources.length === 0 &&
-    [...requiredRuntimeSources].every((source) => foundRuntimeSources.has(source));
+    [...requiredRuntimeSources].every((source) =>
+      foundRuntimeSources.has(source),
+    );
   const runtimeCommands = runtimeInstructions
     .filter((instruction) => instruction.name === "RUN")
     .map((instruction) => instruction.value)
@@ -322,8 +362,12 @@ function inspectDockerfile(filePath) {
     /chown(?:\s+-R)?\s+node(?::node)?\s+data(?:\s|$)/.test(runtimeCommands) &&
     fixtureOwnedByNode;
 
-  const lastUser = runtimeInstructions.filter((instruction) => instruction.name === "USER").at(-1);
-  const nonRootRuntime = ["node", "node:node"].includes(lastUser?.value.toLowerCase());
+  const lastUser = runtimeInstructions
+    .filter((instruction) => instruction.name === "USER")
+    .at(-1);
+  const nonRootRuntime = ["node", "node:node"].includes(
+    lastUser?.value.toLowerCase(),
+  );
 
   const lastCommand = runtimeInstructions
     .filter((instruction) => instruction.name === "CMD")
@@ -339,7 +383,9 @@ function inspectDockerfile(filePath) {
     commandParts = splitShellWords(lastCommand.value);
   }
   const directTypeScript =
-    !runtimeInstructions.some((instruction) => instruction.name === "ENTRYPOINT") &&
+    !runtimeInstructions.some(
+      (instruction) => instruction.name === "ENTRYPOINT",
+    ) &&
     commandParts.length === 2 &&
     commandParts[0] === "node" &&
     normalizeContextSource(commandParts[1]) === "src/main.ts";
@@ -391,7 +437,10 @@ function parseDockerignore(filePath) {
     .map((line) => {
       const negated = line.startsWith("!");
       let pattern = negated ? line.slice(1) : line;
-      pattern = pattern.replaceAll("\\", "/").replace(/^\.\//, "").replace(/^\//, "");
+      pattern = pattern
+        .replaceAll("\\", "/")
+        .replace(/^\.\//, "")
+        .replace(/^\//, "");
       const directoryPattern = pattern.endsWith("/");
       pattern = pattern.replace(/\/$/, "");
       const anchored = pattern.includes("/");
@@ -412,7 +461,9 @@ function listProjectFiles(projectRoot, directoryName) {
 
   const fileNames = [];
   const visit = (currentDirectory) => {
-    for (const entry of readdirSync(currentDirectory, { withFileTypes: true })) {
+    for (const entry of readdirSync(currentDirectory, {
+      withFileTypes: true,
+    })) {
       const entryPath = join(currentDirectory, entry.name);
       if (entry.isDirectory()) {
         visit(entryPath);
@@ -456,7 +507,9 @@ function inspectDockerignore(filePath, projectRoot) {
   const results = Object.fromEntries(
     Object.entries(paths).map(([name, fileNames]) => [
       name,
-      Object.fromEntries(fileNames.map((fileName) => [fileName, isExcluded(fileName)])),
+      Object.fromEntries(
+        fileNames.map((fileName) => [fileName, isExcluded(fileName)]),
+      ),
     ]),
   );
   const everyExcluded = (names) => names.every((name) => isExcluded(name));
@@ -468,7 +521,8 @@ function inspectDockerignore(filePath, projectRoot) {
     ...publicFiles,
     ...paths.fixture,
   ];
-  const unexpectedExcludedRuntimeFiles = requiredRuntimeFiles.filter(isExcluded);
+  const unexpectedExcludedRuntimeFiles =
+    requiredRuntimeFiles.filter(isExcluded);
 
   return {
     sensitiveAndLocalFilesExcluded: everyExcluded([
@@ -481,7 +535,10 @@ function inspectDockerignore(filePath, projectRoot) {
       ...paths.logs,
       ...paths.databases,
     ]),
-    generatedDataExcluded: everyExcluded([...paths.bulkImports, ...paths.runtimeUploads]),
+    generatedDataExcluded: everyExcluded([
+      ...paths.bulkImports,
+      ...paths.runtimeUploads,
+    ]),
     runtimeFilesIncluded:
       sourceFiles.length > 0 &&
       publicFiles.length > 0 &&
@@ -497,15 +554,22 @@ function inspectDockerignore(filePath, projectRoot) {
 }
 
 const mode = process.argv[2];
-const filePath = process.argv[3] ?? (mode === "dockerfile" ? "Dockerfile" : ".dockerignore");
+const filePath =
+  process.argv[3] ?? (mode === "dockerfile" ? "Dockerfile" : ".dockerignore");
 
 try {
   if (mode === "dockerfile") {
     console.log(JSON.stringify(inspectDockerfile(filePath)));
   } else if (mode === "dockerignore") {
-    console.log(JSON.stringify(inspectDockerignore(filePath, resolve(process.argv[4] ?? "."))));
+    console.log(
+      JSON.stringify(
+        inspectDockerignore(filePath, resolve(process.argv[4] ?? ".")),
+      ),
+    );
   } else {
-    throw new Error("Usage: node scripts/container-policy.mjs <dockerfile|dockerignore> [path]");
+    throw new Error(
+      "Usage: node scripts/container-policy.mjs <dockerfile|dockerignore> [path]",
+    );
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

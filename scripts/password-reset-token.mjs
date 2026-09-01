@@ -11,7 +11,8 @@ if (!commands.includes(command) || (command !== "challenge-status" && !token)) {
 }
 
 const databasePath =
-  process.env.DATABASE_URL ?? join(process.cwd(), "data", "bearly-secure.sqlite");
+  process.env.DATABASE_URL ??
+  join(process.cwd(), "data", "bearly-secure.sqlite");
 const database = new DatabaseSync(databasePath, {
   readOnly: command === "inspect" || command === "challenge-status",
 });
@@ -46,7 +47,8 @@ try {
         hashMatches: row?.token_hash === tokenHash,
         rawTokenStored: row?.token_hash === token,
         expiresAboutFifteenMinutes:
-          remainingLifetimeMs > 14 * 60 * 1000 && remainingLifetimeMs <= 15 * 60 * 1000,
+          remainingLifetimeMs > 14 * 60 * 1000 &&
+          remainingLifetimeMs <= 15 * 60 * 1000,
       }),
     );
   } else if (command === "expire") {
@@ -95,9 +97,13 @@ try {
         new Date(Date.now() + 5 * 60 * 1000).toISOString(),
       );
 
-    console.log(JSON.stringify({ pendingChallengeExists: pendingChallengeExists() }));
+    console.log(
+      JSON.stringify({ pendingChallengeExists: pendingChallengeExists() }),
+    );
   } else {
-    console.log(JSON.stringify({ pendingChallengeExists: pendingChallengeExists() }));
+    console.log(
+      JSON.stringify({ pendingChallengeExists: pendingChallengeExists() }),
+    );
   }
 } finally {
   database.close();

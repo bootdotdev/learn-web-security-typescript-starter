@@ -2,13 +2,21 @@ import type { Order, OrderItem } from "../orders/index.ts";
 import type { ShippingDetails } from "../orders/shipping.ts";
 import type { UploadedFile } from "../uploads/index.ts";
 import type { ImportedTaxDocument } from "../uploads/importedTaxDocuments.ts";
-import { escapeHtml, formatMoney, renderAccountLink, renderPage } from "./layout.ts";
+import {
+  escapeHtml,
+  formatMoney,
+  renderAccountLink,
+  renderPage,
+} from "./layout.ts";
 
 function adminLink(isAdmin: boolean): string {
   return isAdmin ? `<a href="/admin">Admin</a>` : "";
 }
 
-export function renderSupportDashboard(displayName: string, isAdmin: boolean): string {
+export function renderSupportDashboard(
+  displayName: string,
+  isAdmin: boolean,
+): string {
   return renderPage(
     "Support Dashboard",
     `<nav class="page-nav" aria-label="Primary"><a class="brand-link" href="/">Bearly Secure</a>${renderAccountLink(displayName)}${adminLink(isAdmin)}</nav>

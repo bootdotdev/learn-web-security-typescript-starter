@@ -59,7 +59,8 @@ try {
       malformedTokenRejected: malformedStatus === 403,
       crossSessionTotpRejected: crossSessionTotpStatus === 403,
       rejectedStateUnchanged:
-        afterRejected?.email === original.email && afterRejected?.totp_secret === enabledTotpSecret,
+        afterRejected?.email === original.email &&
+        afterRejected?.totp_secret === enabledTotpSecret,
     }),
   );
 } finally {

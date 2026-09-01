@@ -49,13 +49,17 @@ export function runSimulatedAssistant(request: AssistantRequest): string {
   }
 
   if (/refund/i.test(userMessage)) {
-    const refundTool = request.tools.find((tool) => tool.name === "issue_refund");
+    const refundTool = request.tools.find(
+      (tool) => tool.name === "issue_refund",
+    );
     return refundTool
       ? refundTool.execute({ orderId })
       : "I cannot issue refunds. Please contact support.";
   }
 
-  const statusTool = request.tools.find((tool) => tool.name === "get_order_status");
+  const statusTool = request.tools.find(
+    (tool) => tool.name === "get_order_status",
+  );
   if (!statusTool) {
     return "Order status is unavailable.";
   }
@@ -97,7 +101,9 @@ function createAssistantTools(db: DatabaseSync): AssistantTool[] {
           return "Order not found.";
         }
 
-        db.prepare("UPDATE orders SET status = 'refunded' WHERE id = ?").run(orderId);
+        db.prepare("UPDATE orders SET status = 'refunded' WHERE id = ?").run(
+          orderId,
+        );
         return `Order #${orderId} was refunded.`;
       },
     },

@@ -5,12 +5,18 @@ export function hashBackupCode(code: string): string {
   return createHash("sha256").update(code).digest("hex");
 }
 
-export function generateBackupCodes(db: DatabaseSync, userId: number, count: number = 8): string[] {
+export function generateBackupCodes(
+  db: DatabaseSync,
+  userId: number,
+  count: number = 8,
+): string[] {
   if (!Number.isSafeInteger(count) || count <= 0) {
     throw new Error("Backup-code count must be a positive integer");
   }
 
-  const codes = Array.from({ length: count }, () => randomBytes(16).toString("hex"));
+  const codes = Array.from({ length: count }, () =>
+    randomBytes(16).toString("hex"),
+  );
   const insert = db.prepare(`
     INSERT INTO totp_backup_codes (user_id, code_hash)
     VALUES (?, ?)
@@ -30,7 +36,11 @@ export function generateBackupCodes(db: DatabaseSync, userId: number, count: num
   }
 }
 
-export function hasUnusedBackupCode(db: DatabaseSync, userId: number, code: string): boolean {
+export function hasUnusedBackupCode(
+  db: DatabaseSync,
+  userId: number,
+  code: string,
+): boolean {
   const backupCode = db
     .prepare(
       `
@@ -46,7 +56,11 @@ export function hasUnusedBackupCode(db: DatabaseSync, userId: number, code: stri
   return backupCode !== undefined;
 }
 
-export function consumeUnusedBackupCode(db: DatabaseSync, userId: number, code: string): boolean {
+export function consumeUnusedBackupCode(
+  db: DatabaseSync,
+  userId: number,
+  code: string,
+): boolean {
   const updateResult = db
     .prepare(
       `
@@ -92,7 +106,10 @@ export function countRecentRecoveryAttempts(
   return row.count;
 }
 
-export function pruneExpiredRecoveryAttempts(db: DatabaseSync, minutes: number = 15): number {
+export function pruneExpiredRecoveryAttempts(
+  db: DatabaseSync,
+  minutes: number = 15,
+): number {
   const result = db
     .prepare(
       `

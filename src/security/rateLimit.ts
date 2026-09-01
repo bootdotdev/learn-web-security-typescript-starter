@@ -55,7 +55,10 @@ export class FixedWindowRateLimiter {
       this.counters.set(key, counter);
     }
 
-    const retryAfterSeconds = Math.max(1, Math.ceil((counter.resetAt - now) / 1000));
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil((counter.resetAt - now) / 1000),
+    );
     if (counter.count >= this.max) {
       return {
         limited: true,
@@ -117,7 +120,10 @@ export function createRateLimiter(options: RateLimiterOptions): RequestHandler {
 }
 
 function validateRateLimiterOptions(options: RateLimiterOptions): void {
-  if (!Number.isSafeInteger(options.windowSeconds) || options.windowSeconds <= 0) {
+  if (
+    !Number.isSafeInteger(options.windowSeconds) ||
+    options.windowSeconds <= 0
+  ) {
     throw new Error("Rate-limit window must be a positive integer");
   }
   if (!Number.isSafeInteger(options.max) || options.max <= 0) {

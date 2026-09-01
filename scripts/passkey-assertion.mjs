@@ -28,14 +28,25 @@ const flags = Buffer.from([userVerified ? 0x05 : 0x01]);
 const counter = Buffer.alloc(4);
 const authData = Buffer.concat([rpIdHash, flags, counter]);
 
-const clientData = { type: "webauthn.get", challenge, origin, crossOrigin: false };
+const clientData = {
+  type: "webauthn.get",
+  challenge,
+  origin,
+  crossOrigin: false,
+};
 const clientDataJSON = Buffer.from(JSON.stringify(clientData));
-const clientDataHash = crypto.createHash("sha256").update(clientDataJSON).digest();
+const clientDataHash = crypto
+  .createHash("sha256")
+  .update(clientDataJSON)
+  .digest();
 
 const sigBase = badSignature
   ? Buffer.concat([authData, Buffer.alloc(clientDataHash.length)])
   : Buffer.concat([authData, clientDataHash]);
-const signature = crypto.sign("SHA256", sigBase, { key: privateKey, dsaEncoding: "der" });
+const signature = crypto.sign("SHA256", sigBase, {
+  key: privateKey,
+  dsaEncoding: "der",
+});
 
 console.log(`authenticatorData=${authData.toString("base64url")}`);
 console.log(`clientDataJSON=${clientDataJSON.toString("base64url")}`);

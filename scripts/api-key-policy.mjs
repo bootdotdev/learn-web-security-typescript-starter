@@ -7,7 +7,8 @@ const wrongScopeKey = "bs_catalog_scope_test";
 const revokedKey = "bs_revoked_warehouse_test";
 
 const databasePath =
-  process.env.DATABASE_URL ?? join(process.cwd(), "data", "bearly-secure.sqlite");
+  process.env.DATABASE_URL ??
+  join(process.cwd(), "data", "bearly-secure.sqlite");
 const database = new DatabaseSync(databasePath);
 
 function hashApiKey(apiKey) {
@@ -36,7 +37,12 @@ try {
       scope = excluded.scope,
       revoked_at = excluded.revoked_at
   `);
-  upsertFixture.run("Catalog Integration", hashApiKey(wrongScopeKey), "products:read", null);
+  upsertFixture.run(
+    "Catalog Integration",
+    hashApiKey(wrongScopeKey),
+    "products:read",
+    null,
+  );
   upsertFixture.run(
     "Revoked Warehouse Integration",
     hashApiKey(revokedKey),

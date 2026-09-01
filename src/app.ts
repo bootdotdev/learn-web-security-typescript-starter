@@ -30,7 +30,10 @@ const apiCors: RequestHandler = (req, res, next) => {
   }
 
   res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  );
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
@@ -84,7 +87,12 @@ export function createApp(deps: Dependencies): express.Express {
   app.use(createStorefrontRouter(deps));
 
   app.use((_req, res) => {
-    sendErrorPage(res, 404, "Page Not Found", "We couldn't find the page you requested.");
+    sendErrorPage(
+      res,
+      404,
+      "Page Not Found",
+      "We couldn't find the page you requested.",
+    );
   });
   app.use(errorHandler);
 

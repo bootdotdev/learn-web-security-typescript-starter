@@ -22,16 +22,22 @@ type SerializedEncryptedPayload = {
   ciphertext: string;
 };
 
-export function loadOptionalKeyring(env: NodeJS.ProcessEnv = process.env): Keyring | undefined {
+export function loadOptionalKeyring(
+  env: NodeJS.ProcessEnv = process.env,
+): Keyring | undefined {
   const hasActiveVersion = Boolean(env[ACTIVE_VERSION_ENV]);
-  const hasConfiguredKey = Object.keys(env).some((name) => name.startsWith(KEY_ENV_PREFIX));
+  const hasConfiguredKey = Object.keys(env).some((name) =>
+    name.startsWith(KEY_ENV_PREFIX),
+  );
   return hasActiveVersion || hasConfiguredKey ? loadKeyring(env) : undefined;
 }
 
 export function loadKeyring(env: NodeJS.ProcessEnv = process.env): Keyring {
   const configuredActiveVersion = env[ACTIVE_VERSION_ENV];
   if (!configuredActiveVersion) {
-    throw new Error(`Missing required environment variable: ${ACTIVE_VERSION_ENV}`);
+    throw new Error(
+      `Missing required environment variable: ${ACTIVE_VERSION_ENV}`,
+    );
   }
 
   const activeVersion = normalizeVersion(configuredActiveVersion);
@@ -54,7 +60,9 @@ export function loadKeyring(env: NodeJS.ProcessEnv = process.env): Keyring {
   }
 
   if (!keys.has(activeVersion)) {
-    throw new Error(`No encryption key configured for active version: ${activeVersion}`);
+    throw new Error(
+      `No encryption key configured for active version: ${activeVersion}`,
+    );
   }
 
   return { activeVersion, keys };
@@ -68,15 +76,23 @@ export function requireKeyring(keyring: Keyring | undefined): Keyring {
   return keyring;
 }
 
-export function encryptStringWithKeyring(value: string, _keyring: Keyring | undefined): string {
+export function encryptStringWithKeyring(
+  value: string,
+  _keyring: Keyring | undefined,
+): string {
   return value;
 }
 
-export function decryptStringWithKeyring(value: string, _keyring: Keyring | undefined): string {
+export function decryptStringWithKeyring(
+  value: string,
+  _keyring: Keyring | undefined,
+): string {
   return value;
 }
 
-export function serializeEncryptedPayload(payload: VersionedEncryptedPayload): Buffer {
+export function serializeEncryptedPayload(
+  payload: VersionedEncryptedPayload,
+): Buffer {
   return Buffer.from(
     JSON.stringify({
       keyVersion: payload.keyVersion,
@@ -88,7 +104,9 @@ export function serializeEncryptedPayload(payload: VersionedEncryptedPayload): B
   );
 }
 
-export function deserializeEncryptedPayload(serialized: Buffer): VersionedEncryptedPayload {
+export function deserializeEncryptedPayload(
+  serialized: Buffer,
+): VersionedEncryptedPayload {
   let payload: unknown;
   try {
     payload = JSON.parse(serialized.toString("utf8"));
@@ -117,7 +135,9 @@ function normalizeVersion(version: string): string {
   return normalized;
 }
 
-function isSerializedEncryptedPayload(payload: unknown): payload is SerializedEncryptedPayload {
+function isSerializedEncryptedPayload(
+  payload: unknown,
+): payload is SerializedEncryptedPayload {
   if (!payload || typeof payload !== "object") {
     return false;
   }

@@ -21,13 +21,17 @@ export async function fetchRemoteImagePreview(
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "TimeoutError") {
-      throw new RemoteImagePreviewError("The image host did not respond in time.");
+      throw new RemoteImagePreviewError(
+        "The image host did not respond in time.",
+      );
     }
     throw new RemoteImagePreviewError("The image host could not be reached.");
   }
 
   if (!response.ok) {
-    throw new RemoteImagePreviewError(`The image host returned HTTP ${response.status}.`);
+    throw new RemoteImagePreviewError(
+      `The image host returned HTTP ${response.status}.`,
+    );
   }
 
   const declaredContentType = response.headers
@@ -47,7 +51,9 @@ export async function fetchRemoteImagePreview(
   const imageBytes = await readImageBytes(response, maxBytes);
   const detectedContentType = detectImageContentType(imageBytes);
   if (!detectedContentType || detectedContentType !== declaredContentType) {
-    throw new RemoteImagePreviewError("The response is not a valid PNG, JPEG, or WebP image.");
+    throw new RemoteImagePreviewError(
+      "The response is not a valid PNG, JPEG, or WebP image.",
+    );
   }
 
   return {
@@ -60,7 +66,10 @@ export async function fetchRemoteImagePreview(
   };
 }
 
-async function readImageBytes(response: Response, maxBytes: number): Promise<Buffer> {
+async function readImageBytes(
+  response: Response,
+  maxBytes: number,
+): Promise<Buffer> {
   if (!response.body) {
     throw new RemoteImagePreviewError("The image response was empty.");
   }
@@ -97,7 +106,9 @@ async function readImageBytes(response: Response, maxBytes: number): Promise<Buf
 
 function detectImageContentType(imageBytes: Buffer): string | undefined {
   if (
-    imageBytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    imageBytes
+      .subarray(0, 8)
+      .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
   ) {
     return "image/png";
   }

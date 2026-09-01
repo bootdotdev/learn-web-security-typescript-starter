@@ -2,7 +2,12 @@ import type { CurrentSession } from "../auth/sessions.ts";
 import { MAX_CART_QUANTITY } from "../cart.ts";
 import type { Product } from "../products.ts";
 import { MAX_REVIEW_BODY_LENGTH, type Review } from "../reviews.ts";
-import { escapeHtml, formatMoney, renderAccountLink, renderPage } from "./layout.ts";
+import {
+  escapeHtml,
+  formatMoney,
+  renderAccountLink,
+  renderPage,
+} from "./layout.ts";
 
 export function renderProductPage(
   current: CurrentSession | undefined,

@@ -1,6 +1,9 @@
 import { escapeHtml, renderAccountLink, renderPage } from "./layout.ts";
 
-export function renderAssistantPage(displayName: string, answer: string = ""): string {
+export function renderAssistantPage(
+  displayName: string,
+  answer: string = "",
+): string {
   const response = answer
     ? `<section class="card-grid"><article class="card"><h2>Assistant</h2><p>${escapeHtml(answer)}</p></article></section>`
     : "";
