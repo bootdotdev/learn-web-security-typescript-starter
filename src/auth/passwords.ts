@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { hash, timingSafeEqual } from "node:crypto";
 
 export const MAX_PASSWORD_LENGTH = 128;
 const LEGACY_SHA256_PATTERN = /^[a-f0-9]{64}$/i;
@@ -10,7 +10,7 @@ export function hashPassword(password: string): string {
     );
   }
 
-  return createHash("sha256").update(password).digest("hex");
+  return hash("sha256", password, "hex");
 }
 
 export function verifyPassword(

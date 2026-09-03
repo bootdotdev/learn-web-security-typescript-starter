@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "node:crypto";
+import { createHmac, hash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { once } from "node:events";
 import {
@@ -17,9 +17,7 @@ if (existsSync(".env")) {
 }
 
 const LEGACY_DEMO_PASSWORD = "password123";
-const LEGACY_DEMO_HASH = createHash("sha256")
-  .update(LEGACY_DEMO_PASSWORD)
-  .digest("hex");
+const LEGACY_DEMO_HASH = hash("sha256", LEGACY_DEMO_PASSWORD, "hex");
 const mode = process.argv[2];
 
 let result;

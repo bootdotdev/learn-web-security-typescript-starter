@@ -1,11 +1,11 @@
-import { createHash, randomBytes } from "node:crypto";
+import { hash, randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { findUserById, type User } from "./users.ts";
 
 const defaultSessionTtlSeconds = 60 * 60 * 24 * 30;
 
 export function fastHash(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
+  return hash("sha256", value, "hex");
 }
 
 type StoredSession = {
