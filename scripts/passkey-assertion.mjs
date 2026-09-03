@@ -23,7 +23,7 @@ const privateKey = crypto.createPrivateKey({
   type: "pkcs8",
 });
 
-const rpIdHash = crypto.createHash("sha256").update(rpID).digest();
+const rpIdHash = crypto.hash("sha256", rpID, "buffer");
 const flags = Buffer.from([userVerified ? 0x05 : 0x01]);
 const counter = Buffer.alloc(4);
 const authData = Buffer.concat([rpIdHash, flags, counter]);
@@ -35,10 +35,7 @@ const clientData = {
   crossOrigin: false,
 };
 const clientDataJSON = Buffer.from(JSON.stringify(clientData));
-const clientDataHash = crypto
-  .createHash("sha256")
-  .update(clientDataJSON)
-  .digest();
+const clientDataHash = crypto.hash("sha256", clientDataJSON, "buffer");
 
 const sigBase = badSignature
   ? Buffer.concat([authData, Buffer.alloc(clientDataHash.length)])

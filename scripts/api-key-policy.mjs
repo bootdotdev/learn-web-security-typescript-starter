@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { hash } from "node:crypto";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -12,7 +12,7 @@ const databasePath =
 const database = new DatabaseSync(databasePath);
 
 function hashApiKey(apiKey) {
-  return createHash("sha256").update(apiKey).digest("hex");
+  return hash("sha256", apiKey, "hex");
 }
 
 try {

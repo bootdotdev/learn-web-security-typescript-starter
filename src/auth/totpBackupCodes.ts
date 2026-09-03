@@ -1,8 +1,8 @@
-import { createHash, randomBytes } from "node:crypto";
+import { hash, randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 
 export function hashBackupCode(code: string): string {
-  return createHash("sha256").update(code).digest("hex");
+  return hash("sha256", code, "hex");
 }
 
 export function generateBackupCodes(

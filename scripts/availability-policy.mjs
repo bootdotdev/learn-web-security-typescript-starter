@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { hash } from "node:crypto";
 import { once } from "node:events";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -838,7 +838,7 @@ function createQuotaWorker(source, workerData) {
 }
 
 function hashApiKey(apiKey) {
-  return createHash("sha256").update(apiKey).digest("hex");
+  return hash("sha256", apiKey, "hex");
 }
 
 async function probeLoadShedding() {

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { hash } from "node:crypto";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -16,10 +16,12 @@ const databasePath =
 const database = new DatabaseSync(databasePath, {
   readOnly: command === "inspect" || command === "challenge-status",
 });
-const tokenHash = token ? createHash("sha256").update(token).digest("hex") : "";
-const testChallengeHash = createHash("sha256")
-  .update("bs_test_password_reset_challenge")
-  .digest("hex");
+const tokenHash = token ? hash("sha256", token, "hex") : "";
+const testChallengeHash = hash(
+  "sha256",
+  "bs_test_password_reset_challenge",
+  "hex",
+);
 
 function pendingChallengeExists() {
   return (

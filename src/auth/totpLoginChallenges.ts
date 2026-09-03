@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { hash, randomBytes } from "node:crypto";
 import type { CookieOptions, Response } from "express";
 import type { DatabaseSync } from "node:sqlite";
 
@@ -25,7 +25,7 @@ type CreatedTotpLoginChallenge = TotpLoginChallenge & {
 };
 
 function hashChallengeToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+  return hash("sha256", token, "hex");
 }
 
 function getCookie(
