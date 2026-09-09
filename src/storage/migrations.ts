@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
-import { relative, resolve, sep } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { storeTaxDocument } from "../uploads/taxDocuments.ts";
 import {
@@ -183,7 +183,8 @@ function isRuntimeDocumentPath(path: string): boolean {
     return (
       relativePath !== "" &&
       relativePath !== ".." &&
-      !relativePath.startsWith(`..${sep}`)
+      !relativePath.startsWith(`..${sep}`) &&
+      !isAbsolute(relativePath)
     );
   });
 }
