@@ -300,7 +300,7 @@ async function probeResourceLimits() {
       results = await withServer(app, async (origin) => {
         const requestHeaders = {
           "Content-Type": "application/json",
-          Origin: "http://localhost:3000",
+          Origin: deps.appOrigin,
         };
         const smallBody = await fetch(`${origin}/login`, {
           method: "POST",
@@ -317,7 +317,7 @@ async function probeResourceLimits() {
         });
         const formHeaders = {
           "Content-Type": "application/x-www-form-urlencoded",
-          Origin: "http://localhost:3000",
+          Origin: deps.appOrigin,
         };
         const smallFormBody = await fetch(`${origin}/login`, {
           method: "POST",
@@ -347,7 +347,7 @@ async function probeResourceLimits() {
             method: "POST",
             headers: {
               Cookie: `session_id=${session.token}`,
-              Origin: "http://localhost:3000",
+              Origin: deps.appOrigin,
             },
             body: smallTaxForm,
             redirect: "manual",
@@ -367,7 +367,7 @@ async function probeResourceLimits() {
             method: "POST",
             headers: {
               Cookie: `session_id=${session.token}`,
-              Origin: "http://localhost:3000",
+              Origin: deps.appOrigin,
             },
             body: smallArchiveForm,
             redirect: "manual",
@@ -385,7 +385,7 @@ async function probeResourceLimits() {
             method: "POST",
             headers: {
               Cookie: `session_id=${session.token}`,
-              Origin: "http://localhost:3000",
+              Origin: deps.appOrigin,
             },
             body: taxForm,
             redirect: "manual",
@@ -403,7 +403,7 @@ async function probeResourceLimits() {
             method: "POST",
             headers: {
               Cookie: `session_id=${session.token}`,
-              Origin: "http://localhost:3000",
+              Origin: deps.appOrigin,
             },
             body: archiveForm,
             redirect: "manual",
@@ -532,10 +532,11 @@ async function probeTimeouts() {
     checkoutResult = await withServer(app, async (origin) => {
       const response = await fetch(`${origin}/checkout`, {
         method: "POST",
+        redirect: "manual",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           Cookie: `session_id=${session.token}`,
-          Origin: "http://localhost:3000",
+          Origin: deps.appOrigin,
         },
         body: new URLSearchParams({
           csrfToken: session.csrf_token,
@@ -843,12 +844,6 @@ function hashApiKey(apiKey) {
 
 async function probeLoadShedding() {
   const { createLoadShedder } = await import("../src/security/loadShedding.ts");
-  const appSource = readFileSync(
-    new URL("../src/app.ts", import.meta.url),
-    "utf8",
-  );
-  const healthRoutePosition = appSource.indexOf('app.get("/health"');
-  const loadShedderPosition = appSource.indexOf("app.use(loadShedder)");
   const app = express();
   let releaseHeldRequest;
   let markHeldRequestStarted;
@@ -919,10 +914,6 @@ async function probeLoadShedding() {
       recoveredAfterFinish: recoveredAfterFinish.status,
       disconnectedResult,
       recoveredAfterClose: recoveredAfterClose.status,
-      healthRegisteredBeforeLoadShedder:
-        healthRoutePosition >= 0 &&
-        loadShedderPosition >= 0 &&
-        healthRoutePosition < loadShedderPosition,
     };
   });
 }

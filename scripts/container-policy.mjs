@@ -204,7 +204,28 @@ function resolveContainerPath(value, workdir) {
   );
 }
 
-function resolveCopyTarget(parsedCopy, source, sourceKind, workdir) {
+function recordCreatedDirectories(command, workdir, knownDirectories) {
+  for (const match of command.matchAll(
+    /(?:^|&&|;)\s*mkdir\s+-p\s+([^;&|]+)/g,
+  )) {
+    for (const directory of splitShellWords(match[1])) {
+      let directoryPath = resolveContainerPath(directory, workdir);
+      directoryPath = directoryPath.replace(/\/$/, "") || "/";
+      while (!knownDirectories.has(directoryPath)) {
+        knownDirectories.add(directoryPath);
+        directoryPath = posix.dirname(directoryPath);
+      }
+    }
+  }
+}
+
+function resolveCopyTarget(
+  parsedCopy,
+  source,
+  sourceKind,
+  workdir,
+  knownDirectories,
+) {
   if (parsedCopy.sources.length !== 1) {
     return undefined;
   }
@@ -219,7 +240,8 @@ function resolveCopyTarget(parsedCopy, source, sourceKind, workdir) {
     destination.endsWith("/") ||
     destination === "." ||
     destination === "./" ||
-    resolvedDestination === workdir;
+    resolvedDestination === workdir ||
+    knownDirectories.has(resolvedDestination);
   return destinationIsDirectory
     ? posix.join(resolvedDestination, posix.basename(source.replace(/\/$/, "")))
     : resolvedDestination;
@@ -282,6 +304,7 @@ function inspectDockerfile(filePath) {
     ...[...contextSources.values()].map((source) => source.key),
   ]);
   const foundRuntimeSources = new Set();
+  const knownDirectories = new Set(["/"]);
   const unexpectedRuntimeSources = [];
   let fixtureOwnedByNode = false;
   let workdir = "/";
@@ -289,6 +312,10 @@ function inspectDockerfile(filePath) {
   for (const instruction of runtimeInstructions) {
     if (instruction.name === "WORKDIR") {
       workdir = resolveContainerPath(instruction.value, workdir);
+      continue;
+    }
+    if (instruction.name === "RUN") {
+      recordCreatedDirectories(instruction.value, workdir, knownDirectories);
       continue;
     }
     if (instruction.name === "ADD") {
@@ -332,6 +359,7 @@ function inspectDockerfile(filePath) {
         source,
         expectedSource.kind,
         workdir,
+        knownDirectories,
       );
       if (target !== expectedSource.target) {
         unexpectedRuntimeSources.push(
@@ -443,12 +471,10 @@ function parseDockerignore(filePath) {
         .replace(/^\//, "");
       const directoryPattern = pattern.endsWith("/");
       pattern = pattern.replace(/\/$/, "");
-      const anchored = pattern.includes("/");
-      const prefix = anchored ? "^" : "(?:^|.*/)";
       const suffix = directoryPattern ? "(?:/.*)?$" : "$";
       return {
         negated,
-        regex: new RegExp(`${prefix}${globToRegexSource(pattern)}${suffix}`),
+        regex: new RegExp(`^${globToRegexSource(pattern)}${suffix}`),
       };
     });
 }

@@ -12,6 +12,10 @@ import { generateSync } from "otplib";
 
 const mode = process.argv[2];
 
+if (existsSync(".env")) {
+  process.loadEnvFile(".env");
+}
+
 setRequiredEnvironment();
 
 let result;
