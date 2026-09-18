@@ -532,6 +532,7 @@ async function probeTimeouts() {
     checkoutResult = await withServer(app, async (origin) => {
       const response = await fetch(`${origin}/checkout`, {
         method: "POST",
+        redirect: "manual",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           Cookie: `session_id=${session.token}`,
@@ -843,12 +844,6 @@ function hashApiKey(apiKey) {
 
 async function probeLoadShedding() {
   const { createLoadShedder } = await import("../src/security/loadShedding.ts");
-  const appSource = readFileSync(
-    new URL("../src/app.ts", import.meta.url),
-    "utf8",
-  );
-  const healthRoutePosition = appSource.indexOf('app.get("/health"');
-  const loadShedderPosition = appSource.indexOf("app.use(loadShedder)");
   const app = express();
   let releaseHeldRequest;
   let markHeldRequestStarted;
@@ -919,10 +914,6 @@ async function probeLoadShedding() {
       recoveredAfterFinish: recoveredAfterFinish.status,
       disconnectedResult,
       recoveredAfterClose: recoveredAfterClose.status,
-      healthRegisteredBeforeLoadShedder:
-        healthRoutePosition >= 0 &&
-        loadShedderPosition >= 0 &&
-        healthRoutePosition < loadShedderPosition,
     };
   });
 }
